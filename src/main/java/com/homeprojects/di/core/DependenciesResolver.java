@@ -64,7 +64,8 @@ public class DependenciesResolver {
 			return Optional.empty();
 		}
 		String name = getBeanName(element);
-		BeanDefination beanDefination = new BeanDefination(name, element, constructor, dependencies);
+		String scope = element.getAnnotation(Component.class).scope();
+		BeanDefination beanDefination = new BeanDefination(name, scope, element, constructor, dependencies);
 		map.put(element, beanDefination);
 		return Optional.of(beanDefination);
 	}

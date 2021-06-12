@@ -8,6 +8,8 @@ import javax.lang.model.element.TypeElement;
 public class BeanDefination {
 	
 	private final String name;
+	
+	private final String scope;
 
 	private final TypeElement element;
 	
@@ -15,8 +17,9 @@ public class BeanDefination {
 
 	private final ExecutableElement constructor; 
 	
-	public BeanDefination(String name, TypeElement element, ExecutableElement constuctor, List<BeanDefination> dependencies) {
+	public BeanDefination(String name, String scope, TypeElement element, ExecutableElement constuctor, List<BeanDefination> dependencies) {
 		this.name = name;
+		this.scope = scope;
 		this.element = element;
 		this.constructor = constuctor;
 		this.dependencies = dependencies;
@@ -24,6 +27,10 @@ public class BeanDefination {
 	
 	public String getName() {
 		return name;
+	}
+	
+	public String getScope() {
+		return scope;
 	}
 	
 	public List<BeanDefination> getDependencies() {

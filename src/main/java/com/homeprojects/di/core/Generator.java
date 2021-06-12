@@ -36,14 +36,10 @@ public class Generator {
 	private final List<BeanDefination> beans;
 
 	private final ProcessingEnvironment env;
-	
-	private final ParameterizedTypeName beansMapType;
 
 	public Generator(Queue<BeanDefination> beans, ProcessingEnvironment env) {
 		this.beans = new ArrayList<>(beans);
 		this.env = env;
-			
-		this.beansMapType = getBeansMapType();
 	}
 
 	public void generate() {
@@ -51,7 +47,7 @@ public class Generator {
 				classBuilder(BEAN_CONTEXT_CLAZZ_NAME)
 				.addModifiers(Modifier.PUBLIC)
 				.addFields(getFields())
-				.addMethod(addInitMethod())
+				.addMethod(getConstructor())
 				.addMethods(getAccessors())
 				.build();
 		
@@ -74,12 +70,21 @@ public class Generator {
 		return MethodSpec.methodBuilder(bean.getName())
 				.addModifiers(Modifier.PUBLIC)
 				.returns(asTypeName(bean.getElement()))
-				.addCode("return $L;", bean.getName())
+				.addCode(getAccessorBody(bean))
 				.build();
+	}
+
+	private CodeBlock getAccessorBody(BeanDefination bean) {
+		if(bean.getScope().equals("singleton")) {
+			return CodeBlock.of("return $L;", bean.getName());
+		}
+		String paramertsInString = getParametersSeparatedByComma(bean);
+		return CodeBlock.of("return new $T($L);", bean.getElement(), paramertsInString);
 	}
 
 	private Iterable<FieldSpec> getFields() {
 		return beans.stream()
+			.filter(bean -> bean.getScope().equals("singleton"))
 			.map(bean -> getField(bean))
 			.collect(Collectors.toList());
 	}
@@ -94,31 +99,26 @@ public class Generator {
 		return TypeName.get(element.asType());
 	}
 
-	private ParameterizedTypeName getBeansMapType() {
-		TypeName wildcard = WildcardTypeName.subtypeOf(Object.class);
-		TypeName clsWildcard = ParameterizedTypeName.get(ClassName.get(Class.class), wildcard);
-		TypeName object = ClassName.get(Object.class);
-		ClassName map = ClassName.get(Map.class);
-		return ParameterizedTypeName.get(map, clsWildcard, object);
-	}
-
-	private MethodSpec addInitMethod() {
+	private MethodSpec getConstructor() {
 		return MethodSpec
 				.constructorBuilder()
 				.addModifiers(Modifier.PUBLIC)
-				.addCode(writeObjects())
+				.addCode(getConstructorBody())
 				.build();
 	}
 
-	private CodeBlock writeObjects() {
+	private CodeBlock getConstructorBody() {
 		Builder builder = CodeBlock.builder();
-		for (int i = 0; i < beans.size(); i++) {
-			BeanDefination dependency = beans.get(i);
-			TypeElement type = dependency.getElement();
-			String paramertsInString = getParametersSeparatedByComma(dependency);
-			builder.addStatement(CodeBlock.of("this.$L = new $T($L)", dependency.getName(), type, paramertsInString));
-		}
+		beans.stream()
+			.filter(bean -> bean.getScope().equals("singleton"))
+			.forEach(bean -> getConstrutorBeanStatement(builder, bean));
 		return builder.build();
+	}
+
+	private void getConstrutorBeanStatement(Builder builder, BeanDefination bean) {
+		TypeElement type = bean.getElement();
+		String paramertsInString = getParametersSeparatedByComma(bean);
+		builder.addStatement(CodeBlock.of("this.$L = new $T($L)", bean.getName(), type, paramertsInString));
 	}
 
 	private String getParametersSeparatedByComma(BeanDefination dependency) {
