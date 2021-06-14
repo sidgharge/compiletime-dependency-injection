@@ -1,18 +1,20 @@
 package com.homeprojects.di.core;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
@@ -24,27 +26,29 @@ public class DependenciesResolver {
 
 	private final List<TypeElement> elements;
 	
-	private final Map<TypeElement, BeanDefination> map;
+	private final Map<TypeElement, BeanDefinition> map;
 
 	private final ProcessingEnvironment env;
 	
 	private boolean hasErrors = false;
 
+	private final Queue<BeanDefinition> beans;
+	
 	public DependenciesResolver(List<TypeElement> dependencies, ProcessingEnvironment processingEnv) {
 		this.elements = dependencies;
 		this.env = processingEnv;
 		this.map = new HashMap<>();
+		beans = new LinkedList<>();
 	}
 
-	public Queue<BeanDefination> resolve() {
-		Queue<BeanDefination> beans = new PriorityQueue<>((b1, b2) -> b1.getDependencies().size() - b2.getDependencies().size());
+	public Queue<BeanDefinition> resolve() {
 		for(TypeElement element: elements) {
-			resolve(element).ifPresent(bd -> beans.add(bd));
+			resolve(element);
 		}
 		return beans;
 	}
 	
-	private Optional<BeanDefination> resolve(TypeElement element) {
+	private Optional<BeanDefinition> resolve(TypeElement element) {
 		if(map.containsKey(element)) {
 			return Optional.ofNullable(map.get(element));
 		}
@@ -54,7 +58,7 @@ public class DependenciesResolver {
 			.map(e -> (ExecutableElement) e)
 			.orElseGet(this::error);
 		
-		List<BeanDefination> dependencies = constructor.getParameters().stream()
+		List<BeanDefinition> dependencies = constructor.getParameters().stream()
 			.map(this::resolveParameter)
 			.filter(bd -> bd.isPresent())
 			.map(bd -> bd.get())
@@ -65,8 +69,16 @@ public class DependenciesResolver {
 		}
 		String name = getBeanName(element);
 		String scope = element.getAnnotation(Component.class).scope();
-		BeanDefination beanDefination = new BeanDefination(name, scope, element, constructor, dependencies);
+		List<String> postconstructMethods = element.getEnclosedElements()
+			.stream()
+			.filter(ee -> ee.getKind().equals(ElementKind.METHOD))
+			.filter(method -> method.getAnnotation(PostConstruct.class) != null)
+			.map(method -> method.getSimpleName().toString())
+			.collect(Collectors.toList());
+			
+		BeanDefinition beanDefination = new BeanDefinition(name, scope, element, constructor, dependencies, postconstructMethods);
 		map.put(element, beanDefination);
+		beans.add(beanDefination);
 		return Optional.of(beanDefination);
 	}
 
@@ -80,15 +92,24 @@ public class DependenciesResolver {
 		return name;
 	}
 
-	private Optional<BeanDefination> resolveParameter(VariableElement variableElement) {
+	private Optional<BeanDefinition> resolveParameter(VariableElement variableElement) {
 		TypeMirror type = variableElement.asType();
 		TypeElement dependecyElement = (TypeElement) env.getTypeUtils().asElement(type);
-		if(!elements.contains(dependecyElement)) {
+		Optional<TypeElement> implementation = findImplementation(dependecyElement);
+		if(implementation.isEmpty()) {
 			error();
 			env.getMessager().printMessage(Kind.ERROR, "Parameter is not a bean", variableElement);
 			return Optional.empty();
 		}
-		return resolve(dependecyElement);
+		return resolve(implementation.get());
+	}
+	
+	private Optional<TypeElement> findImplementation(TypeElement element) {
+		return elements.stream()
+			.filter(e -> env.getTypeUtils().isAssignable(e.asType(), element.asType()))
+			.filter(e -> !e.getModifiers().contains(Modifier.ABSTRACT))
+			.filter(e -> !e.getKind().isInterface())
+			.findFirst();
 	}
 	
 	private <T> T error() {

@@ -1,11 +1,12 @@
 package com.homeprojects.di.core;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 
-public class BeanDefination {
+public class BeanDefinition {
 	
 	private final String name;
 	
@@ -13,16 +14,19 @@ public class BeanDefination {
 
 	private final TypeElement element;
 	
-	private final List<BeanDefination> dependencies;
+	private final List<BeanDefinition> dependencies;
 
-	private final ExecutableElement constructor; 
+	private final ExecutableElement constructor;
 	
-	public BeanDefination(String name, String scope, TypeElement element, ExecutableElement constuctor, List<BeanDefination> dependencies) {
+	private final List<String> postconstrutMethods;
+	
+	public BeanDefinition(String name, String scope, TypeElement element, ExecutableElement constuctor, List<BeanDefinition> dependencies, List<String> postconstrutMethods) {
 		this.name = name;
 		this.scope = scope;
 		this.element = element;
 		this.constructor = constuctor;
 		this.dependencies = dependencies;
+		this.postconstrutMethods = postconstrutMethods;
 	}
 	
 	public String getName() {
@@ -33,7 +37,7 @@ public class BeanDefination {
 		return scope;
 	}
 	
-	public List<BeanDefination> getDependencies() {
+	public List<BeanDefinition> getDependencies() {
 		return dependencies;
 	}
 	
@@ -43,5 +47,9 @@ public class BeanDefination {
 	
 	public TypeElement getElement() {
 		return element;
+	}
+	
+	public List<String> getPostconstrutMethods() {
+		return postconstrutMethods;
 	}
 }

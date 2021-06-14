@@ -16,7 +16,7 @@ import javax.tools.Diagnostic.Kind;
 
 import com.google.auto.service.AutoService;
 import com.homeprojects.di.annotations.Component;
-import com.homeprojects.di.core.BeanDefination;
+import com.homeprojects.di.core.BeanDefinition;
 import com.homeprojects.di.core.DependenciesResolver;
 import com.homeprojects.di.core.Generator;
 
@@ -34,8 +34,8 @@ public class BeanProcessor extends AbstractProcessor {
 			.collect(Collectors.toList());
 		
 		DependenciesResolver resolver = new DependenciesResolver(dependencies, processingEnv);
-		Queue<BeanDefination> beans = resolver.resolve();
-		if(resolver.hasError()) {
+		Queue<BeanDefinition> beans = resolver.resolve();
+		if(resolver.hasError() || beans.isEmpty()) {
 			return false;
 		}
 		

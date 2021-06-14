@@ -1,43 +1,36 @@
 package com.homeprojects.di.core;
 
+import static com.homeprojects.di.core.Utils.isSingleton;
+
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.TypeMirror;
 
-import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.CodeBlock.Builder;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.WildcardTypeName;
 
 public class Generator {
 
-	private static final String BEAN_CONTEXT_CLAZZ_NAME = "BeanFactory";
+	private static final String BEAN_CONTEXT_CLAZZ_NAME = "DeafultBeanFactory";
 
 	private static final String BEAN_CONTEXT_PACKAGE_NAME = "com.homeprojects.generated";
 
-	private final List<BeanDefination> beans;
+	private final List<BeanDefinition> beans;
 
 	private final ProcessingEnvironment env;
 
-	public Generator(Queue<BeanDefination> beans, ProcessingEnvironment env) {
+	public Generator(Queue<BeanDefinition> beans, ProcessingEnvironment env) {
 		this.beans = new ArrayList<>(beans);
 		this.env = env;
 	}
@@ -45,9 +38,12 @@ public class Generator {
 	public void generate() {
 		TypeSpec spec = TypeSpec.
 				classBuilder(BEAN_CONTEXT_CLAZZ_NAME)
+				.addSuperinterface(BeanFactory.class)
 				.addModifiers(Modifier.PUBLIC)
-				.addFields(getFields())
+				.addField(getIsClosedField())
+				.addFields(getSingletonFields())
 				.addMethod(getConstructor())
+				.addMethod(getCloseMethod())
 				.addMethods(getAccessors())
 				.build();
 		
@@ -60,13 +56,25 @@ public class Generator {
 		}
 	}
 
+	private MethodSpec getCloseMethod() {
+		return MethodSpec.methodBuilder("close")
+				.addAnnotation(Override.class)
+				.addModifiers(Modifier.PUBLIC)
+				.returns(void.class)
+				.build();
+	}
+
+	private FieldSpec getIsClosedField() {
+		return FieldSpec.builder(TypeName.BOOLEAN, "isClosed", Modifier.PRIVATE).build();
+	}
+
 	private Iterable<MethodSpec> getAccessors() {
 		return beans.stream()
 				.map(bean -> getAcessor(bean))
 				.collect(Collectors.toList());
 	}
 	
-	private MethodSpec getAcessor(BeanDefination bean) {
+	private MethodSpec getAcessor(BeanDefinition bean) {
 		return MethodSpec.methodBuilder(bean.getName())
 				.addModifiers(Modifier.PUBLIC)
 				.returns(asTypeName(bean.getElement()))
@@ -74,22 +82,36 @@ public class Generator {
 				.build();
 	}
 
-	private CodeBlock getAccessorBody(BeanDefination bean) {
-		if(bean.getScope().equals("singleton")) {
+	private CodeBlock getAccessorBody(BeanDefinition bean) {
+		if(isSingleton(bean)) {
 			return CodeBlock.of("return $L;", bean.getName());
 		}
-		String paramertsInString = getParametersSeparatedByComma(bean);
-		return CodeBlock.of("return new $T($L);", bean.getElement(), paramertsInString);
+		return getPrototypeAccesorBody(bean);
 	}
 
-	private Iterable<FieldSpec> getFields() {
+	private CodeBlock getPrototypeAccesorBody(BeanDefinition bean) {
+		String paramertsInString = getParametersSeparatedByComma(bean);
+		
+		List<CodeBlock> codeBlocks = new ArrayList<>();
+		CodeBlock cb1 = CodeBlock.of("$T temp = new $T($L);", bean.getElement(), bean.getElement(), paramertsInString);
+		codeBlocks.add(cb1);
+		for(String postconstructMethod : bean.getPostconstrutMethods()) {
+			CodeBlock cb2 = CodeBlock.of("temp.$L();", postconstructMethod);
+			codeBlocks.add(cb2);
+		}
+		CodeBlock cb3 = CodeBlock.of("return temp;", bean.getElement(), paramertsInString);
+		codeBlocks.add(cb3);
+		return CodeBlock.join(codeBlocks, "\n");
+	}
+
+	private Iterable<FieldSpec> getSingletonFields() {
 		return beans.stream()
-			.filter(bean -> bean.getScope().equals("singleton"))
-			.map(bean -> getField(bean))
+			.filter(Utils::isSingleton)
+			.map(bean -> getSingletonField(bean))
 			.collect(Collectors.toList());
 	}
 
-	private FieldSpec getField(BeanDefination bean) {
+	private FieldSpec getSingletonField(BeanDefinition bean) {
 		return FieldSpec
 			.builder(asTypeName(bean.getElement()), bean.getName(), Modifier.PRIVATE)
 		    .build();
@@ -110,18 +132,25 @@ public class Generator {
 	private CodeBlock getConstructorBody() {
 		Builder builder = CodeBlock.builder();
 		beans.stream()
-			.filter(bean -> bean.getScope().equals("singleton"))
-			.forEach(bean -> getConstrutorBeanStatement(builder, bean));
+			.filter(Utils::isSingleton)
+			.flatMap(bean -> getConstrutorBeanStatement(bean).stream())
+			.forEach(cb -> builder.addStatement(cb));
 		return builder.build();
 	}
 
-	private void getConstrutorBeanStatement(Builder builder, BeanDefination bean) {
+	private List<CodeBlock> getConstrutorBeanStatement(BeanDefinition bean) {
 		TypeElement type = bean.getElement();
 		String paramertsInString = getParametersSeparatedByComma(bean);
-		builder.addStatement(CodeBlock.of("this.$L = new $T($L)", bean.getName(), type, paramertsInString));
+		
+		List<CodeBlock> codeBlocks = new ArrayList<CodeBlock>();
+		codeBlocks.add(CodeBlock.of("this.$L = new $T($L)", bean.getName(), type, paramertsInString));
+		for(String postconstructMethod: bean.getPostconstrutMethods()) {
+			codeBlocks.add(CodeBlock.of("this.$L.$L()", bean.getName(), postconstructMethod));
+		}
+		return codeBlocks;
 	}
 
-	private String getParametersSeparatedByComma(BeanDefination dependency) {
+	private String getParametersSeparatedByComma(BeanDefinition dependency) {
 		return dependency.getDependencies()
 				.stream()
 				.map(bean -> bean.getName() + "()")
