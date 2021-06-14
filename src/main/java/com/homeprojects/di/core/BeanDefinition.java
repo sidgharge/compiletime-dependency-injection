@@ -19,14 +19,17 @@ public class BeanDefinition {
 	private final ExecutableElement constructor;
 	
 	private final List<String> postconstrutMethods;
+
+	private final List<String> preDestroyMethods;
 	
-	public BeanDefinition(String name, String scope, TypeElement element, ExecutableElement constuctor, List<BeanDefinition> dependencies, List<String> postconstrutMethods) {
+	public BeanDefinition(String name, String scope, TypeElement element, ExecutableElement constuctor, List<BeanDefinition> dependencies, List<String> postconstrutMethods, List<String> preDestroyMethods) {
 		this.name = name;
 		this.scope = scope;
 		this.element = element;
 		this.constructor = constuctor;
 		this.dependencies = dependencies;
 		this.postconstrutMethods = postconstrutMethods;
+		this.preDestroyMethods = preDestroyMethods;
 	}
 	
 	public String getName() {
@@ -51,5 +54,9 @@ public class BeanDefinition {
 	
 	public List<String> getPostconstrutMethods() {
 		return postconstrutMethods;
+	}
+	
+	public List<String> getPreDestroyMethods() {
+		return preDestroyMethods;
 	}
 }

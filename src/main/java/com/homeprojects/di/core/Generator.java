@@ -60,12 +60,42 @@ public class Generator {
 		return MethodSpec.methodBuilder("close")
 				.addAnnotation(Override.class)
 				.addModifiers(Modifier.PUBLIC)
+				.addCode(getCloseMethodBody())
 				.returns(void.class)
 				.build();
 	}
 
+	private CodeBlock getCloseMethodBody() {
+		Builder builder = CodeBlock.builder();
+		
+		builder.beginControlFlow("if(isClosed)");
+		builder.addStatement("return");
+		builder.endControlFlow();
+		
+		beans.stream()
+				.filter(Utils::isSingleton)
+				.map(bean -> getCloseCallStatement(bean))
+				.forEach(cb -> builder.add(cb));
+		
+		builder.addStatement("isClosed = true");
+		return builder.build();
+	}
+
+	private CodeBlock getCloseCallStatement(BeanDefinition bean) {
+		Builder builder = CodeBlock.builder();
+		
+		for(String preDestroyMethodName: bean.getPreDestroyMethods()) {
+			builder.addStatement("this.$L.$L()", bean.getName(), preDestroyMethodName);
+		}
+		
+		return builder.build();
+	}
+
 	private FieldSpec getIsClosedField() {
-		return FieldSpec.builder(TypeName.BOOLEAN, "isClosed", Modifier.PRIVATE).build();
+		return FieldSpec
+				.builder(TypeName.BOOLEAN, "isClosed", Modifier.PRIVATE)
+				.initializer("false")
+				.build();
 	}
 
 	private Iterable<MethodSpec> getAccessors() {

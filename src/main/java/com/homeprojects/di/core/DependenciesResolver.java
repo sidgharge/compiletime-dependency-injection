@@ -10,6 +10,7 @@ import java.util.Queue;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -69,17 +70,34 @@ public class DependenciesResolver {
 		}
 		String name = getBeanName(element);
 		String scope = element.getAnnotation(Component.class).scope();
+
+		List<String> postconstructMethods = getPostConstructMethods(element);
+		List<String> preDestroyMethods = getPreDestroyMethods(element);
+			
+		BeanDefinition beanDefination = new BeanDefinition(name, scope, element, constructor, dependencies, postconstructMethods, preDestroyMethods);
+		map.put(element, beanDefination);
+		beans.add(beanDefination);
+		return Optional.of(beanDefination);
+	}
+
+	private List<String> getPreDestroyMethods(TypeElement element) {
+		List<String> postconstructMethods = element.getEnclosedElements()
+				.stream()
+				.filter(ee -> ee.getKind().equals(ElementKind.METHOD))
+				.filter(method -> method.getAnnotation(PreDestroy.class) != null)
+				.map(method -> method.getSimpleName().toString())
+				.collect(Collectors.toList());
+		return postconstructMethods;
+	}
+
+	private List<String> getPostConstructMethods(TypeElement element) {
 		List<String> postconstructMethods = element.getEnclosedElements()
 			.stream()
 			.filter(ee -> ee.getKind().equals(ElementKind.METHOD))
 			.filter(method -> method.getAnnotation(PostConstruct.class) != null)
 			.map(method -> method.getSimpleName().toString())
 			.collect(Collectors.toList());
-			
-		BeanDefinition beanDefination = new BeanDefinition(name, scope, element, constructor, dependencies, postconstructMethods);
-		map.put(element, beanDefination);
-		beans.add(beanDefination);
-		return Optional.of(beanDefination);
+		return postconstructMethods;
 	}
 
 	private String getBeanName(TypeElement element) {
