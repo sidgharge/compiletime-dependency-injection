@@ -22,6 +22,8 @@ public class BeanDefinition {
 
 	private final List<String> preDestroyMethods;
 	
+	private BeanDefinition parentConfig;
+	
 	public BeanDefinition(String name, String scope, TypeElement element, ExecutableElement constuctor, List<BeanDefinition> dependencies, List<String> postconstrutMethods, List<String> preDestroyMethods) {
 		this.name = name;
 		this.scope = scope;
@@ -58,5 +60,17 @@ public class BeanDefinition {
 	
 	public List<String> getPreDestroyMethods() {
 		return preDestroyMethods;
+	}
+
+	public void addBeanMethods(List<String> beanMethods) {
+		this.postconstrutMethods.addAll(beanMethods);
+	}
+	
+	public void setParentConfig(BeanDefinition parentConfig) {
+		this.parentConfig = parentConfig;
+	}
+	
+	public BeanDefinition getParentConfig() {
+		return parentConfig;
 	}
 }

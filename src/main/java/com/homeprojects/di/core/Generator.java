@@ -123,7 +123,15 @@ public class Generator {
 		String paramertsInString = getParametersSeparatedByComma(bean);
 		
 		List<CodeBlock> codeBlocks = new ArrayList<>();
-		CodeBlock cb1 = CodeBlock.of("$T temp = new $T($L);", bean.getElement(), bean.getElement(), paramertsInString);
+		CodeBlock cb1 = null;
+		if(bean.getParentConfig() == null) {
+			cb1 = CodeBlock.of("$T temp = new $T($L);", bean.getElement(), bean.getElement(), paramertsInString);			
+		} else {
+			cb1 = CodeBlock.of("$T temp = $L.$L($L);",
+					bean.getElement(), bean.getParentConfig().getName(),
+					bean.getConstructor().getSimpleName().toString(),
+					paramertsInString);
+		}
 		codeBlocks.add(cb1);
 		for(String postconstructMethod : bean.getPostconstrutMethods()) {
 			CodeBlock cb2 = CodeBlock.of("temp.$L();", postconstructMethod);
@@ -173,7 +181,11 @@ public class Generator {
 		String paramertsInString = getParametersSeparatedByComma(bean);
 		
 		List<CodeBlock> codeBlocks = new ArrayList<CodeBlock>();
-		codeBlocks.add(CodeBlock.of("this.$L = new $T($L)", bean.getName(), type, paramertsInString));
+		if(bean.getParentConfig() == null) {
+			codeBlocks.add(CodeBlock.of("this.$L = new $T($L)", bean.getName(), type, paramertsInString));
+		} else {
+			codeBlocks.add(CodeBlock.of("this.$L = $L.$L($L)", bean.getName(), bean.getParentConfig().getName(), bean.getConstructor().getSimpleName().toString(), paramertsInString));
+		}
 		for(String postconstructMethod: bean.getPostconstrutMethods()) {
 			codeBlocks.add(CodeBlock.of("this.$L.$L()", bean.getName(), postconstructMethod));
 		}

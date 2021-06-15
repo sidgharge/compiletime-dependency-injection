@@ -3,7 +3,6 @@ package com.homeprojects.di.processors;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
@@ -15,9 +14,10 @@ import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic.Kind;
 
 import com.google.auto.service.AutoService;
-import com.homeprojects.di.annotations.Component;
 import com.homeprojects.di.core.BeanDefinition;
-import com.homeprojects.di.core.DependenciesResolver;
+import com.homeprojects.di.core.BeanToken;
+import com.homeprojects.di.core.DependeciesFinder;
+import com.homeprojects.di.core.DependenciesResolver2;
 import com.homeprojects.di.core.Generator;
 
 @SupportedAnnotationTypes("com.homeprojects.di.annotations.Component")
@@ -27,15 +27,11 @@ public class BeanProcessor extends AbstractProcessor {
 	
 	@Override
 	public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnvironment) {
-		List<TypeElement> dependencies = roundEnvironment
-			.getElementsAnnotatedWith(Component.class)
-			.stream()
-			.map(element -> (TypeElement) element)
-			.collect(Collectors.toList());
+		List<BeanToken> tokens = new DependeciesFinder(roundEnvironment, processingEnv).find();
 		
-		DependenciesResolver resolver = new DependenciesResolver(dependencies, processingEnv);
+		DependenciesResolver2 resolver = new DependenciesResolver2(tokens, processingEnv);
 		Queue<BeanDefinition> beans = resolver.resolve();
-		if(resolver.hasError() || beans.isEmpty()) {
+		if(beans.isEmpty() || tokens.isEmpty()) {
 			return false;
 		}
 		

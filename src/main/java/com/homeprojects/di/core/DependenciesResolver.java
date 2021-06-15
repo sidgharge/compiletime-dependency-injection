@@ -1,6 +1,6 @@
 package com.homeprojects.di.core;
 
-import java.util.ArrayList;
+import java.lang.annotation.Annotation;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,11 +21,13 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
+import com.homeprojects.di.annotations.Bean;
 import com.homeprojects.di.annotations.Component;
+import com.homeprojects.di.annotations.Configuration;
 
 public class DependenciesResolver {
 
-	private final List<TypeElement> elements;
+	private final List<TypeElement> components;
 	
 	private final Map<TypeElement, BeanDefinition> map;
 
@@ -36,14 +38,14 @@ public class DependenciesResolver {
 	private final Queue<BeanDefinition> beans;
 	
 	public DependenciesResolver(List<TypeElement> dependencies, ProcessingEnvironment processingEnv) {
-		this.elements = dependencies;
+		this.components = dependencies;
 		this.env = processingEnv;
 		this.map = new HashMap<>();
 		beans = new LinkedList<>();
 	}
 
 	public Queue<BeanDefinition> resolve() {
-		for(TypeElement element: elements) {
+		for(TypeElement element: components) {
 			resolve(element);
 		}
 		return beans;
@@ -69,40 +71,48 @@ public class DependenciesResolver {
 			return Optional.empty();
 		}
 		String name = getBeanName(element);
-		String scope = element.getAnnotation(Component.class).scope();
+		String scope = getScope(element);
 
-		List<String> postconstructMethods = getPostConstructMethods(element);
-		List<String> preDestroyMethods = getPreDestroyMethods(element);
+		List<String> postconstructMethods = getMethodsAnnotatedWith(element, PostConstruct.class);
+		List<String> preDestroyMethods = getMethodsAnnotatedWith(element, PreDestroy.class);
 			
 		BeanDefinition beanDefination = new BeanDefinition(name, scope, element, constructor, dependencies, postconstructMethods, preDestroyMethods);
 		map.put(element, beanDefination);
 		beans.add(beanDefination);
+		
+		if(element.getAnnotation(Configuration.class) != null) {
+			findBeansConfiguration(beanDefination);
+		}
 		return Optional.of(beanDefination);
 	}
 
-	private List<String> getPreDestroyMethods(TypeElement element) {
-		List<String> postconstructMethods = element.getEnclosedElements()
-				.stream()
-				.filter(ee -> ee.getKind().equals(ElementKind.METHOD))
-				.filter(method -> method.getAnnotation(PreDestroy.class) != null)
-				.map(method -> method.getSimpleName().toString())
-				.collect(Collectors.toList());
-		return postconstructMethods;
+	private void findBeansConfiguration(BeanDefinition beanDefination) {
+		List<String> beanMethods = getMethodsAnnotatedWith(beanDefination.getElement(), Bean.class);
+		beanDefination.addBeanMethods(beanMethods);
 	}
 
-	private List<String> getPostConstructMethods(TypeElement element) {
+	private String getScope(TypeElement element) {
+		Component component = element.getAnnotation(Component.class);
+		return component == null ? "singleton" : component.scope();
+	}
+
+
+	private <A extends Annotation> List<String> getMethodsAnnotatedWith(TypeElement element, Class<A> clazz) {
 		List<String> postconstructMethods = element.getEnclosedElements()
 			.stream()
 			.filter(ee -> ee.getKind().equals(ElementKind.METHOD))
-			.filter(method -> method.getAnnotation(PostConstruct.class) != null)
+			.filter(method -> method.getAnnotation(clazz) != null)
 			.map(method -> method.getSimpleName().toString())
 			.collect(Collectors.toList());
 		return postconstructMethods;
 	}
 
 	private String getBeanName(TypeElement element) {
+		String name = "";
 		Component component = element.getAnnotation(Component.class);
-		String name = component.name();
+		if(component != null) {
+			name = component.name();
+		}
 		if(name.isEmpty()) {
 			name = element.getSimpleName().toString();
 			name = name.length() == 1 ? name.toLowerCase() : Character.toLowerCase(name.charAt(0)) + name.substring(1);
@@ -123,7 +133,7 @@ public class DependenciesResolver {
 	}
 	
 	private Optional<TypeElement> findImplementation(TypeElement element) {
-		return elements.stream()
+		return components.stream()
 			.filter(e -> env.getTypeUtils().isAssignable(e.asType(), element.asType()))
 			.filter(e -> !e.getModifiers().contains(Modifier.ABSTRACT))
 			.filter(e -> !e.getKind().isInterface())
