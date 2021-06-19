@@ -26,7 +26,7 @@ public class DependenciesResolver2 {
 	
 	private final Map<BeanToken, BeanDefinition> map;
 	
-	private final Queue<BeanDefinition> queue; 
+	private final Queue<BeanDefinition> queue;
 
 	public DependenciesResolver2(List<BeanToken> tokens, ProcessingEnvironment processingEnv) {
 		this.tokens = tokens;
