@@ -191,4 +191,23 @@ public class BeanInfoGenerator {
 		}
 		return name + "BeanInfo";
 	}
+	
+	private MethodSpec getOnContextInitMethod() {
+		return MethodSpec.methodBuilder("onContextInit")
+					.addModifiers(Modifier.PUBLIC)
+					.addAnnotation(Override.class)
+					.returns(void.class)
+					.addCode(getOnContextInitMethodBody())
+					.build();
+	}
+
+	private CodeBlock getOnContextInitMethodBody() {
+		Builder builder = CodeBlock.builder();
+		
+		
+		for (String pcm : def.getPostconstrutMethods()) {
+			builder.addStatement("$L.$L()", def.getName(), pcm);
+		}
+		return builder.build();
+	}
 }

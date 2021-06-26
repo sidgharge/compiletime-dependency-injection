@@ -26,7 +26,7 @@ public class Generator2 {
 
 	public void generate() {
 		for (BeanDefinition beanDefinition : beans) {
-			new BeanInfoGenerator(beanDefinition, env).processBeanDefinition();;
+			new BeanInfoGenerator(beanDefinition, env).processBeanDefinition();
 		}
 	}	
 
