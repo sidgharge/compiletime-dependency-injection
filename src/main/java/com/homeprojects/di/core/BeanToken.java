@@ -25,6 +25,8 @@ public class BeanToken {
 	private String scope;
 	
 	private BeanToken parentConfiguration;
+	
+	private TypeElement exactType;
 
 	public BeanToken(TypeElement element) {
 		this.element = element;
@@ -97,5 +99,13 @@ public class BeanToken {
 	
 	public BeanToken getParentConfiguration() {
 		return parentConfiguration;
+	}
+	
+	public void setExactType(TypeElement exactType) {
+		this.exactType = exactType;
+	}
+	
+	public TypeElement getExactType() {
+		return exactType;
 	}
 }

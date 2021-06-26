@@ -14,11 +14,8 @@ import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic.Kind;
 
 import com.google.auto.service.AutoService;
-import com.homeprojects.di.core.BeanDefinition;
-import com.homeprojects.di.core.BeanToken;
-import com.homeprojects.di.core.DependeciesFinder;
-import com.homeprojects.di.core.DependenciesResolver2;
-import com.homeprojects.di.core.Generator;
+import com.homeprojects.di.core.*;
+import com.homeprojects.di.generators.Generator2;
 
 @SupportedAnnotationTypes("com.homeprojects.di.annotations.Component")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
@@ -35,7 +32,8 @@ public class BeanProcessor extends AbstractProcessor {
 			return false;
 		}
 		
-		new Generator(beans, processingEnv).generate();
+		new Generator2(beans, processingEnv).generate();
+		
 		return false;
 	}
 	
