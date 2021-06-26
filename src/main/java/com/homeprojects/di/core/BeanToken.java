@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 
 public class BeanToken {
 
@@ -26,7 +27,7 @@ public class BeanToken {
 	
 	private BeanToken parentConfiguration;
 	
-	private TypeElement exactType;
+	private TypeMirror exactType;
 
 	public BeanToken(TypeElement element) {
 		this.element = element;
@@ -101,11 +102,11 @@ public class BeanToken {
 		return parentConfiguration;
 	}
 	
-	public void setExactType(TypeElement exactType) {
+	public void setExactType(TypeMirror exactType) {
 		this.exactType = exactType;
 	}
 	
-	public TypeElement getExactType() {
+	public TypeMirror getExactType() {
 		return exactType;
 	}
 }

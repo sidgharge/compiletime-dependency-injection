@@ -57,6 +57,7 @@ public class DependeciesFinder {
 			token.setInitializer(getConstructor(element));
 			token.setBeanName(getBeanName(element));
 			token.setScope(getScope(element));
+			token.setExactType(element.asType());
 			tokens.add(token);
 		}
 		
@@ -106,6 +107,7 @@ public class DependeciesFinder {
 		
 		token.setBeanName(getAtBeanBeanName(beanMethod));
 		token.setScope(beanMethod.getAnnotation(Bean.class).scope());
+		token.setExactType(beanMethod.getReturnType());
 		
 		parent.addAtBean(token);
 		token.setParentConfiguration(parent);

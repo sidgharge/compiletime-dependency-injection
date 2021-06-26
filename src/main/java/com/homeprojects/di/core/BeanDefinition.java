@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 
 public class BeanDefinition {
 	
@@ -23,6 +24,8 @@ public class BeanDefinition {
 	private final List<String> preDestroyMethods;
 	
 	private BeanDefinition parentConfig;
+	
+	private TypeMirror exactType;
 	
 	public BeanDefinition(String name, String scope, TypeElement element, ExecutableElement constuctor, List<BeanDefinition> dependencies, List<String> postconstrutMethods, List<String> preDestroyMethods) {
 		this.name = name;
@@ -72,5 +75,13 @@ public class BeanDefinition {
 	
 	public BeanDefinition getParentConfig() {
 		return parentConfig;
+	}
+	
+	public void setExactType(TypeMirror exactType) {
+		this.exactType = exactType;
+	}
+	
+	public TypeMirror getExactType() {
+		return exactType;
 	}
 }

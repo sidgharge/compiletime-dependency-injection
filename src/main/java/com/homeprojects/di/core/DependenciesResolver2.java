@@ -62,6 +62,8 @@ public class DependenciesResolver2 {
 				token.getPreDestroys().stream().map(m -> m.getSimpleName().toString()).collect(Collectors.toList())
 		);
 		
+		definition.setExactType(token.getExactType());
+		
 		map.put(token, definition);
 		queue.add(definition);
 		

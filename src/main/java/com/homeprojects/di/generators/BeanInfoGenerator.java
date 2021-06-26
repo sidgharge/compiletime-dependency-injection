@@ -116,14 +116,14 @@ public class BeanInfoGenerator {
 	}
 
 	private TypeName getTypeNameForElement() {
-		return TypeName.get(def.getElement().asType());
+		return TypeName.get(def.getExactType());
 	}
 
 	private CodeBlock getBuildMethodBody() {
 		Builder builder = CodeBlock.builder();
 		
 		for (BeanDefinition dependency : def.getDependencies()) {
-			builder.addStatement("$T $L = beanFactory.getBean($T.class)", dependency.getElement(), dependency.getName(), dependency.getElement());
+			builder.addStatement("$T $L = beanFactory.getBean($T.class)", dependency.getExactType(), dependency.getName(), dependency.getElement());
 		}
 		
 		String dependencyNamesCommaSeprataed = def.getDependencies().stream()
@@ -132,10 +132,10 @@ public class BeanInfoGenerator {
 		
 		if(def.getParentConfig() != null) {
 			BeanDefinition parent = def.getParentConfig();
-			builder.addStatement("$T $L = beanFactory.getBean($T.class)", parent.getElement(), parent.getName(), parent.getElement());
-			builder.addStatement("$T $L = $L.$L($L)", def.getElement(), def.getName(), parent.getName(), def.getConstructor().getSimpleName(), dependencyNamesCommaSeprataed);
+			builder.addStatement("$T $L = beanFactory.getBean($T.class)", parent.getExactType(), parent.getName(), parent.getElement());
+			builder.addStatement("$T $L = $L.$L($L)", def.getExactType(), def.getName(), parent.getName(), def.getConstructor().getSimpleName(), dependencyNamesCommaSeprataed);
 		} else {
-			builder.addStatement("$T $L = new $T($L)", def.getElement(), def.getName(), def.getElement(), dependencyNamesCommaSeprataed);
+			builder.addStatement("$T $L = new $T($L)", def.getExactType(), def.getName(), def.getExactType(), dependencyNamesCommaSeprataed);
 		}
 		
 		for (String pcm : def.getPostconstrutMethods()) {
@@ -183,6 +183,12 @@ public class BeanInfoGenerator {
 	}
 
 	private String getClassName() {
-		return def.getElement().getSimpleName().toString() + "BeanInfo";
+		String name = def.getName();
+		if(name.length() > 1) {
+			name = name.substring(0, 1).toUpperCase() + name.substring(1);
+		} else {
+			name = name.toUpperCase();
+		}
+		return name + "BeanInfo";
 	}
 }
