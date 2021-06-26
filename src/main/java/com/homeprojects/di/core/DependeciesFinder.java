@@ -9,11 +9,11 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 
+import com.homeprojects.di.annotations.Autowired;
 import com.homeprojects.di.annotations.Bean;
 import com.homeprojects.di.annotations.Component;
 import com.homeprojects.di.annotations.Configuration;
@@ -25,8 +25,6 @@ public class DependeciesFinder {
 	private final ProcessingEnvironment processingEnv;
 	
 	private final List<BeanToken> tokens;
-	
-	private boolean hasErrors = false;
 	
 	public DependeciesFinder(RoundEnvironment roundEnvironment, ProcessingEnvironment processingEnv) {
 		this.roundEnvironment = roundEnvironment;
@@ -61,6 +59,7 @@ public class DependeciesFinder {
 			tokens.add(token);
 		}
 		
+		token.setSetters(getMethodsAnnotatedWith(element, Autowired.class));
 		token.setPostConstructs(getMethodsAnnotatedWith(element, PostConstruct.class));
 		token.setPreDestroys(getMethodsAnnotatedWith(element, PreDestroy.class));
 		
@@ -72,7 +71,7 @@ public class DependeciesFinder {
 				.filter(e -> e.getKind().equals(ElementKind.CONSTRUCTOR))
 				.findFirst()
 				.map(e -> (ExecutableElement) e)
-				.orElseGet(this::error); // TODO Handle error
+				.orElseThrow(); // TODO Handle error
 	}
 	
 	private String getBeanName(TypeElement element) {
@@ -125,10 +124,5 @@ public class DependeciesFinder {
 			.filter(method -> method.getAnnotation(clazz) != null)
 			.map(method -> (ExecutableElement) method)
 			.collect(Collectors.toList());
-	}
-	
-	private <T> T error() {
-		this.hasErrors = true;
-		return null;
 	}
 }

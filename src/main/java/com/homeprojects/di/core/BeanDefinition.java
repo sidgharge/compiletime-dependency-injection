@@ -2,6 +2,7 @@ package com.homeprojects.di.core;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -19,24 +20,28 @@ public class BeanDefinition {
 
 	private final ExecutableElement constructor;
 	
+	private final List<Setter> setters;
+	
 	private final List<String> postconstrutMethods;
 
 	private final List<String> preDestroyMethods;
 	
 	private BeanDefinition parentConfig;
 	
-	private TypeMirror exactType;
+	private final TypeMirror exactType;
 	
-	public BeanDefinition(String name, String scope, TypeElement element, ExecutableElement constuctor, List<BeanDefinition> dependencies, List<String> postconstrutMethods, List<String> preDestroyMethods) {
-		this.name = name;
-		this.scope = scope;
-		this.element = element;
-		this.constructor = constuctor;
+	public BeanDefinition(BeanToken token, ExecutableElement initializer, List<BeanDefinition> dependencies, List<Setter> setters) {
+		this.name = token.getBeanName();
+		this.scope = token.getScope();
+		this.element = token.getElement();
+		this.constructor = initializer;
+		this.setters = setters;
 		this.dependencies = dependencies;
-		this.postconstrutMethods = postconstrutMethods;
-		this.preDestroyMethods = preDestroyMethods;
+		this.postconstrutMethods = token.getPostConstructs().stream().map(m -> m.getSimpleName().toString()).collect(Collectors.toList());
+		this.preDestroyMethods = token.getPreDestroys().stream().map(m -> m.getSimpleName().toString()).collect(Collectors.toList());
+		this.exactType = token.getExactType();
 	}
-	
+
 	public String getName() {
 		return name;
 	}
@@ -77,11 +82,11 @@ public class BeanDefinition {
 		return parentConfig;
 	}
 	
-	public void setExactType(TypeMirror exactType) {
-		this.exactType = exactType;
-	}
-	
 	public TypeMirror getExactType() {
 		return exactType;
+	}
+	
+	public List<Setter> getSetters() {
+		return setters;
 	}
 }

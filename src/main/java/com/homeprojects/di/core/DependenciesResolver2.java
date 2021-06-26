@@ -1,5 +1,6 @@
 package com.homeprojects.di.core;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -14,7 +15,6 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
-import javax.tools.Diagnostic.Kind;
 
 public class DependenciesResolver2 {
 	
@@ -22,8 +22,6 @@ public class DependenciesResolver2 {
 	
 	private final ProcessingEnvironment env;
 
-	private boolean hasErrors = false;
-	
 	private final Map<BeanToken, BeanDefinition> map;
 	
 	private final Queue<BeanDefinition> queue;
@@ -47,22 +45,22 @@ public class DependenciesResolver2 {
 			return map.get(token);
 		}
 		ExecutableElement initializer = token.getInitializer();
+		
 		List<BeanDefinition> dependencies = initializer.getParameters()
-		.stream()
-		.map(ve -> resolveParameter(ve))
-		.collect(Collectors.toList());
+			.stream()
+			.map(ve -> resolveParameter(ve))
+			.collect(Collectors.toList());
 		
-		BeanDefinition definition = new BeanDefinition(
-				token.getBeanName(),
-				token.getScope(),
-				token.getElement(),
-				initializer,
-				dependencies,
-				token.getPostConstructs().stream().map(m -> m.getSimpleName().toString()).collect(Collectors.toList()),
-				token.getPreDestroys().stream().map(m -> m.getSimpleName().toString()).collect(Collectors.toList())
-		);
+		List<Setter> setters = new ArrayList<>();
+		for(ExecutableElement method: token.getSetters()) {
+			List<BeanDefinition> setterDeps = method.getParameters().stream()
+				.map(param -> resolveParameter(param))
+				.collect(Collectors.toList());
+			Setter setter = new Setter(method.getSimpleName().toString(), setterDeps, method);
+			setters.add(setter);
+		}
 		
-		definition.setExactType(token.getExactType());
+		BeanDefinition definition = new BeanDefinition(token, initializer, dependencies, setters);
 		
 		map.put(token, definition);
 		queue.add(definition);

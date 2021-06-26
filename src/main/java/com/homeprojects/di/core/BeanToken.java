@@ -15,10 +15,12 @@ public class BeanToken {
 
 	private ExecutableElement initializer;
 	
+	private List<ExecutableElement> setters;
+	
 	private List<ExecutableElement> postConstructs;
 	
 	private List<ExecutableElement> preDestroys;
-
+	
 	private final List<BeanToken> atBeans;
 
 	private String beanName;
@@ -108,5 +110,13 @@ public class BeanToken {
 	
 	public TypeMirror getExactType() {
 		return exactType;
+	}
+	
+	public void setSetters(List<ExecutableElement> setters) {
+		this.setters = setters;
+	}
+	
+	public List<ExecutableElement> getSetters() {
+		return setters;
 	}
 }

@@ -3,14 +3,18 @@ package com.homeprojects.di.generators;
 import static com.homeprojects.di.core.Utils.isSingleton;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.TypeElement;
 
 import com.homeprojects.di.annotations.GeneratedBeanInfo;
 import com.homeprojects.di.core.BeanDefinition;
+import com.homeprojects.di.core.Setter;
 import com.homeprojects.di.core.beaninfo.AbstractBeanInfo;
 import com.homeprojects.di.core.beaninfo.AbstractSingletonBeanInfo;
 import com.homeprojects.di.core.beaninfo.BeanInfoRegister;
@@ -46,7 +50,8 @@ public class BeanInfoGenerator {
 				.addAnnotation(GeneratedBeanInfo.class)
 //				.addStaticBlock(getStaticRegistrationBlock(className))
 				.addMethod(getConstructor())
-				.addMethod(getBuildMethod());
+				.addMethod(getBuildMethod())
+				.addMethod(getOnContextInitMethod());
 		
 		if(!isSingleton(def)) {
 			builder.addMethod(getGetInstanceMethod());
@@ -138,10 +143,6 @@ public class BeanInfoGenerator {
 			builder.addStatement("$T $L = new $T($L)", def.getExactType(), def.getName(), def.getExactType(), dependencyNamesCommaSeprataed);
 		}
 		
-		for (String pcm : def.getPostconstrutMethods()) {
-			builder.addStatement("$L.$L()", def.getName(), pcm);
-		}
-		
 		builder.addStatement("return $L", def.getName());
 		return builder.build();
 	}
@@ -205,8 +206,20 @@ public class BeanInfoGenerator {
 		Builder builder = CodeBlock.builder();
 		
 		
+		for(Setter setter: def.getSetters()) {
+			String dependencyListCommaSeprataed = setter.getDependencies().stream()
+					.map(dependency -> "beanFactory.getBean($" + dependency.getName() + ":T.class)")
+					.collect(Collectors.joining(", "));
+			
+			Map<String, ?> map = setter.getDependencies().stream()
+					.collect(Collectors.toMap(dep -> dep.getName(), dep -> dep.getElement()));
+			builder.add("instance.$L(", setter.getName());
+			builder.addNamed(dependencyListCommaSeprataed, map);
+			builder.addStatement(")");
+		}
+		
 		for (String pcm : def.getPostconstrutMethods()) {
-			builder.addStatement("$L.$L()", def.getName(), pcm);
+			builder.addStatement("instance.$L()", pcm);
 		}
 		return builder.build();
 	}

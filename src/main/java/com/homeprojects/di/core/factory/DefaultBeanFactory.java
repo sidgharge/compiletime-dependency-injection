@@ -18,6 +18,8 @@ public class DefaultBeanFactory implements BeanFactory {
     		beanInfo.setBeanFactory(this);
 			beanInfos.add(beanInfo);
 		}
+    	
+    	beanInfos.forEach(bi -> bi.onContextInit());
     }
 
     @Override
