@@ -51,12 +51,12 @@ public class DependeciesFinder {
 	}
 
 	private BeanToken processComponent(TypeElement element, String type) {
-		if(!element.getKind().equals(ElementKind.CLASS) || element.getModifiers().contains(Modifier.ABSTRACT)) {
-			throw new ValidationException("@Component can only be used on concrete classed", element);
-		}
 		BeanToken token = new BeanToken(element);
 		token.setType(type);
 		if(type.equals("component") || type.equals("configuration")) {
+			if(!element.getKind().equals(ElementKind.CLASS) || element.getModifiers().contains(Modifier.ABSTRACT)) {
+				throw new ValidationException("This can only be used on concrete classed", element);
+			}
 			token.setInitializer(getConstructor(element));
 			token.setBeanName(getBeanName(element));
 			token.setScope(getScope(element));
