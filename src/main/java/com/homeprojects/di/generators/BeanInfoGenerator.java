@@ -15,6 +15,7 @@ import javax.lang.model.element.TypeElement;
 import com.homeprojects.di.annotations.GeneratedBeanInfo;
 import com.homeprojects.di.core.BeanDefinition;
 import com.homeprojects.di.core.Setter;
+import com.homeprojects.di.core.Utils;
 import com.homeprojects.di.core.beaninfo.AbstractBeanInfo;
 import com.homeprojects.di.core.beaninfo.AbstractSingletonBeanInfo;
 import com.homeprojects.di.core.beaninfo.BeanInfoRegister;
@@ -48,7 +49,6 @@ public class BeanInfoGenerator {
 				.addModifiers(Modifier.PUBLIC)
 				.superclass(getSuperClass())
 				.addAnnotation(GeneratedBeanInfo.class)
-//				.addStaticBlock(getStaticRegistrationBlock(className))
 				.addMethod(getConstructor())
 				.addMethod(getBuildMethod());
 		
@@ -66,18 +66,6 @@ public class BeanInfoGenerator {
 			e.printStackTrace();
 		}
 	}
-	
-//	@Override
-//	public Class<?> getType() {
-//		// TODO Auto-generated method stub
-//		return null;
-//	}
-//
-//	@Override
-//	public String getScope() {
-//		// TODO Auto-generated method stub
-//		return null;
-//	}
 
 	private MethodSpec getGetTypeMethod() {
 		return MethodSpec.methodBuilder("getType")
@@ -141,33 +129,24 @@ public class BeanInfoGenerator {
 		} else {
 			builder.addStatement("$T $L = new $T($L)", def.getExactType(), def.getName(), def.getExactType(), dependencyNamesCommaSeprataed);
 		}
-		builder.add(getOnContextInitMethodBody());
+		builder.add(getAfterInitCode());
 		
 		builder.addStatement("return $L", def.getName());
 		return builder.build();
 	}
 
 	private MethodSpec getConstructor() {
-		ParameterSpec beanFactoryParameter = ParameterSpec.builder(BeanFactory.class, "beanFactory", Modifier.FINAL).build();
 		return MethodSpec.constructorBuilder()
 				.addModifiers(Modifier.PUBLIC)
-				//.addParameter(beanFactoryParameter)
 				.addStatement("super()")
-//				.addCode("super($N);", beanFactoryParameter)
 				.build();
 	}
 
 	private String getPackage() {
 		if(def.getParentConfig() == null) {
-			return ((PackageElement) def.getElement().getEnclosingElement()).getQualifiedName().toString();
+			return Utils.getPackageName(def.getElement());
 		}
-		return ((PackageElement) def.getParentConfig().getElement().getEnclosingElement()).getQualifiedName().toString();
-	}
-
-	private CodeBlock getStaticRegistrationBlock(String className) {
-		return CodeBlock.builder()
-				.addStatement("$T.beans.add($L::new)", BeanInfoRegister.class, className)
-				.build();
+		return Utils.getPackageName(def.getParentConfig().getElement());
 	}
 
 	private TypeName getSuperClass() {
@@ -192,35 +171,37 @@ public class BeanInfoGenerator {
 		}
 		return name + "BeanInfo";
 	}
-	
-	private MethodSpec getOnContextInitMethod() {
-		return MethodSpec.methodBuilder("onContextInit")
-					.addModifiers(Modifier.PUBLIC)
-					.addAnnotation(Override.class)
-					.returns(void.class)
-					.addCode(getOnContextInitMethodBody())
-					.build();
-	}
 
-	private CodeBlock getOnContextInitMethodBody() {
+	private CodeBlock getAfterInitCode() {
 		Builder builder = CodeBlock.builder();
 		
-		
 		for(Setter setter: def.getSetters()) {
-			String dependencyListCommaSeprataed = setter.getDependencies().stream()
-					.map(dependency -> "beanFactory.getBean($" + dependency.getName() + ":T.class)")
-					.collect(Collectors.joining(", "));
-			
-			Map<String, ?> map = setter.getDependencies().stream()
-					.collect(Collectors.toMap(dep -> dep.getName(), dep -> dep.getElement()));
-			builder.add("$L.$L(", def.getName(),setter.getName());
-			builder.addNamed(dependencyListCommaSeprataed, map);
-			builder.addStatement(")");
+			builder.add(getSetterCode(setter));
 		}
 		
 		for (String pcm : def.getPostconstrutMethods()) {
 			builder.addStatement("$L.$L()", def.getName(),pcm);
 		}
+		
+		return builder.build();
+	}
+
+	private CodeBlock getSetterCode(Setter setter) {
+		String dependencyListCommaSeprataed = setter.getDependencies()
+				.stream()
+				.map(dependency -> "beanFactory.getBean($" + dependency.getName() + ":T.class)")
+				.collect(Collectors.joining(", "));
+		
+		Map<String, ?> map = setter.getDependencies()
+				.stream()
+				.collect(Collectors.toMap(dep -> dep.getName(), dep -> dep.getElement()));
+		
+		Builder builder = CodeBlock.builder();
+		
+		builder.add("$L.$L(", def.getName(),setter.getName());
+		builder.addNamed(dependencyListCommaSeprataed, map);
+		builder.addStatement(")");
+		
 		return builder.build();
 	}
 }
