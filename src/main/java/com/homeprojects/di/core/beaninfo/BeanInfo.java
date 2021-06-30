@@ -14,8 +14,6 @@ public interface BeanInfo<T> {
     
     void setBeanFactory(BeanFactory beanFactory);
     
-    void onContextInit();
-
     default boolean isSingleton() {
         return "singleton".equals(getScope());
     }

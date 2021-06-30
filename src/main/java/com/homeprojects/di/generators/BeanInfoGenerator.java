@@ -50,8 +50,7 @@ public class BeanInfoGenerator {
 				.addAnnotation(GeneratedBeanInfo.class)
 //				.addStaticBlock(getStaticRegistrationBlock(className))
 				.addMethod(getConstructor())
-				.addMethod(getBuildMethod())
-				.addMethod(getOnContextInitMethod());
+				.addMethod(getBuildMethod());
 		
 		if(!isSingleton(def)) {
 			builder.addMethod(getGetInstanceMethod());
@@ -142,6 +141,7 @@ public class BeanInfoGenerator {
 		} else {
 			builder.addStatement("$T $L = new $T($L)", def.getExactType(), def.getName(), def.getExactType(), dependencyNamesCommaSeprataed);
 		}
+		builder.add(getOnContextInitMethodBody());
 		
 		builder.addStatement("return $L", def.getName());
 		return builder.build();
@@ -213,13 +213,13 @@ public class BeanInfoGenerator {
 			
 			Map<String, ?> map = setter.getDependencies().stream()
 					.collect(Collectors.toMap(dep -> dep.getName(), dep -> dep.getElement()));
-			builder.add("instance.$L(", setter.getName());
+			builder.add("$L.$L(", def.getName(),setter.getName());
 			builder.addNamed(dependencyListCommaSeprataed, map);
 			builder.addStatement(")");
 		}
 		
 		for (String pcm : def.getPostconstrutMethods()) {
-			builder.addStatement("instance.$L()", pcm);
+			builder.addStatement("$L.$L()", def.getName(),pcm);
 		}
 		return builder.build();
 	}
