@@ -11,12 +11,14 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 
 import com.homeprojects.di.annotations.Autowired;
 import com.homeprojects.di.annotations.Bean;
 import com.homeprojects.di.annotations.Component;
 import com.homeprojects.di.annotations.Configuration;
+import com.homeprojects.di.validation.ValidationException;
 
 public class DependeciesFinder {
 	
@@ -49,6 +51,9 @@ public class DependeciesFinder {
 	}
 
 	private BeanToken processComponent(TypeElement element, String type) {
+		if(!element.getKind().equals(ElementKind.CLASS) || element.getModifiers().contains(Modifier.ABSTRACT)) {
+			throw new ValidationException("@Component can only be used on concrete classed", element);
+		}
 		BeanToken token = new BeanToken(element);
 		token.setType(type);
 		if(type.equals("component") || type.equals("configuration")) {

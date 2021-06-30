@@ -14,8 +14,12 @@ import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic.Kind;
 
 import com.google.auto.service.AutoService;
-import com.homeprojects.di.core.*;
+import com.homeprojects.di.core.BeanDefinition;
+import com.homeprojects.di.core.BeanToken;
+import com.homeprojects.di.core.DependeciesFinder;
+import com.homeprojects.di.core.DependenciesResolver2;
 import com.homeprojects.di.generators.Generator;
+import com.homeprojects.di.validation.ValidationException;
 
 @SupportedAnnotationTypes("com.homeprojects.di.annotations.Component")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
@@ -24,15 +28,19 @@ public class BeanProcessor extends AbstractProcessor {
 	
 	@Override
 	public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnvironment) {
-		List<BeanToken> tokens = new DependeciesFinder(roundEnvironment, processingEnv).find();
-		
-		DependenciesResolver2 resolver = new DependenciesResolver2(tokens, processingEnv);
-		Queue<BeanDefinition> beans = resolver.resolve();
-		if(beans.isEmpty() || tokens.isEmpty()) {
-			return false;
+		try {
+			List<BeanToken> tokens = new DependeciesFinder(roundEnvironment, processingEnv).find();
+			
+			DependenciesResolver2 resolver = new DependenciesResolver2(tokens, processingEnv);
+			Queue<BeanDefinition> beans = resolver.resolve();
+			if(beans.isEmpty() || tokens.isEmpty()) {
+				return false;
+			}
+			
+			new Generator(beans, processingEnv).generate();
+		} catch (ValidationException e) {
+			processingEnv.getMessager().printMessage(Kind.ERROR, e.getMessage(), e.getElement());
 		}
-		
-		new Generator(beans, processingEnv).generate();
 		
 		return false;
 	}
