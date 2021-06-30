@@ -1,152 +1,124 @@
-//package com.homeprojects.di.core;
-//
-//import java.lang.annotation.Annotation;
-//import java.util.HashMap;
-//import java.util.LinkedList;
-//import java.util.List;
-//import java.util.Map;
-//import java.util.Optional;
-//import java.util.Queue;
-//import java.util.stream.Collectors;
-//
-//import javax.annotation.PostConstruct;
-//import javax.annotation.PreDestroy;
-//import javax.annotation.processing.ProcessingEnvironment;
-//import javax.lang.model.element.Element;
-//import javax.lang.model.element.ElementKind;
-//import javax.lang.model.element.ExecutableElement;
-//import javax.lang.model.element.Modifier;
-//import javax.lang.model.element.TypeElement;
-//import javax.lang.model.element.VariableElement;
-//import javax.lang.model.type.TypeMirror;
-//import javax.tools.Diagnostic.Kind;
-//
-//import com.homeprojects.di.annotations.Bean;
-//import com.homeprojects.di.annotations.Component;
-//import com.homeprojects.di.annotations.Configuration;
-//
-//public class DependenciesResolver {
-//
-//	private final List<TypeElement> components;
-//	
-//	private final Map<TypeElement, BeanDefinition> map;
-//
-//	private final ProcessingEnvironment env;
-//	
-//	private boolean hasErrors = false;
-//
-//	private final Queue<BeanDefinition> beans;
-//	
-//	public DependenciesResolver(List<TypeElement> dependencies, ProcessingEnvironment processingEnv) {
-//		this.components = dependencies;
-//		this.env = processingEnv;
-//		this.map = new HashMap<>();
-//		beans = new LinkedList<>();
-//	}
-//
-//	public Queue<BeanDefinition> resolve() {
-//		for(TypeElement element: components) {
-//			resolve(element);
-//		}
-//		return beans;
-//	}
-//	
-//	private Optional<BeanDefinition> resolve(TypeElement element) {
-//		if(map.containsKey(element)) {
-//			return Optional.ofNullable(map.get(element));
-//		}
-//		ExecutableElement constructor = element.getEnclosedElements().stream()
-//			.filter(e -> e.getKind().equals(ElementKind.CONSTRUCTOR))
-//			.findFirst()
-//			.map(e -> (ExecutableElement) e)
-//			.orElseGet(this::error);
-//		
-//		List<BeanDefinition> dependencies = constructor.getParameters().stream()
-//			.map(this::resolveParameter)
-//			.filter(bd -> bd.isPresent())
-//			.map(bd -> bd.get())
-//			.collect(Collectors.toList());
-//		
-//		if(dependencies.size() != constructor.getParameters().size()) {
-//			return Optional.empty();
-//		}
-//		String name = getBeanName(element);
-//		String scope = getScope(element);
-//
-//		List<String> postconstructMethods = getMethodsAnnotatedWith(element, PostConstruct.class);
-//		List<String> preDestroyMethods = getMethodsAnnotatedWith(element, PreDestroy.class);
-//			
-//		BeanDefinition beanDefination = new BeanDefinition(name, scope, element, constructor, dependencies, postconstructMethods, preDestroyMethods);
-//		map.put(element, beanDefination);
-//		beans.add(beanDefination);
-//		
-//		if(element.getAnnotation(Configuration.class) != null) {
-//			findBeansConfiguration(beanDefination);
-//		}
-//		return Optional.of(beanDefination);
-//	}
-//
-//	private void findBeansConfiguration(BeanDefinition beanDefination) {
-//		List<String> beanMethods = getMethodsAnnotatedWith(beanDefination.getElement(), Bean.class);
-//		beanDefination.addBeanMethods(beanMethods);
-//	}
-//
-//	private String getScope(TypeElement element) {
-//		Component component = element.getAnnotation(Component.class);
-//		return component == null ? "singleton" : component.scope();
-//	}
-//
-//
-//	private <A extends Annotation> List<String> getMethodsAnnotatedWith(TypeElement element, Class<A> clazz) {
-//		List<String> postconstructMethods = element.getEnclosedElements()
-//			.stream()
-//			.filter(ee -> ee.getKind().equals(ElementKind.METHOD))
-//			.filter(method -> method.getAnnotation(clazz) != null)
-//			.map(method -> method.getSimpleName().toString())
-//			.collect(Collectors.toList());
-//		return postconstructMethods;
-//	}
-//
-//	private String getBeanName(TypeElement element) {
-//		String name = "";
-//		Component component = element.getAnnotation(Component.class);
-//		if(component != null) {
-//			name = component.name();
-//		}
-//		if(name.isEmpty()) {
-//			name = element.getSimpleName().toString();
-//			name = name.length() == 1 ? name.toLowerCase() : Character.toLowerCase(name.charAt(0)) + name.substring(1);
-//		}
-//		return name;
-//	}
-//
-//	private Optional<BeanDefinition> resolveParameter(VariableElement variableElement) {
-//		TypeMirror type = variableElement.asType();
-//		TypeElement dependecyElement = (TypeElement) env.getTypeUtils().asElement(type);
-//		Optional<TypeElement> implementation = findImplementation(dependecyElement);
-//		if(implementation.isEmpty()) {
-//			error();
-//			env.getMessager().printMessage(Kind.ERROR, "Parameter is not a bean", variableElement);
-//			return Optional.empty();
-//		}
-//		return resolve(implementation.get());
-//	}
-//	
-//	private Optional<TypeElement> findImplementation(TypeElement element) {
-//		return components.stream()
-//			.filter(e -> env.getTypeUtils().isAssignable(e.asType(), element.asType()))
-//			.filter(e -> !e.getModifiers().contains(Modifier.ABSTRACT))
-//			.filter(e -> !e.getKind().isInterface())
-//			.findFirst();
-//	}
-//	
-//	private <T> T error() {
-//		this.hasErrors = true;
-//		return null;
-//	}
-//	
-//	public boolean hasError() {
-//		return hasErrors;
-//	}
-//
-//}
+package com.homeprojects.di.core;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeMirror;
+
+import com.homeprojects.di.validation.ValidationException;
+
+public class DependenciesResolver {
+	
+	private final List<BeanToken> tokens;
+	
+	private final ProcessingEnvironment env;
+
+	private final Map<BeanToken, BeanDefinition> map;
+	
+	private final Queue<BeanDefinition> queue;
+	
+	private final Set<TypeElement> resolvingQueue = new LinkedHashSet<>();
+
+	public DependenciesResolver(List<BeanToken> tokens, ProcessingEnvironment processingEnv) {
+		this.tokens = tokens;
+		this.env = processingEnv;
+		map = new HashMap<>();
+		queue = new LinkedList<>();
+	}
+
+	public Queue<BeanDefinition> resolve() {
+		for (BeanToken token : tokens) {
+			resolve(token);
+		}
+		return queue;
+	}
+
+	private BeanDefinition resolve(BeanToken token) {
+		validateForCircularDependency(token);
+		resolvingQueue.add(token.getElement());
+		if(map.containsKey(token)) {
+			return map.get(token);
+		}
+		ExecutableElement initializer = token.getInitializer();
+		
+		List<BeanDefinition> dependencies = initializer.getParameters()
+			.stream()
+			.map(ve -> resolveParameter(ve))
+			.collect(Collectors.toList());
+		
+		List<Setter> setters = new ArrayList<>();
+		for(ExecutableElement method: token.getSetters()) {
+			List<BeanDefinition> setterDeps = method.getParameters().stream()
+				.map(param -> resolveParameter(param))
+				.collect(Collectors.toList());
+			Setter setter = new Setter(method.getSimpleName().toString(), setterDeps, method);
+			setters.add(setter);
+		}
+		
+		BeanDefinition definition = new BeanDefinition(token, initializer, dependencies, setters);
+		
+		map.put(token, definition);
+		queue.add(definition);
+		resolvingQueue.remove(token.getElement());
+
+		token.getAtBeans()
+			.stream()
+			.map(this::resolve)
+			.forEach(bd -> bd.setParentConfig(definition));
+		
+		return definition;
+	}
+
+	private void validateForCircularDependency(BeanToken token) {
+		if(!resolvingQueue.contains(token.getElement())) {
+			return;
+		}
+		String direction = resolvingQueue.stream()
+			.map(e -> e.getSimpleName())
+			.collect(Collectors.joining(" -> "));
+		
+		throw new ValidationException("Circular dependency found: " + direction);
+	}
+	
+	private BeanDefinition resolveParameter(VariableElement variableElement) {
+		TypeMirror type = variableElement.asType();
+		TypeElement dependecyElement = (TypeElement) env.getTypeUtils().asElement(type);
+		return findImplementation(dependecyElement);
+	}
+	
+	private BeanDefinition findImplementation(TypeElement element) {
+		Optional<BeanToken> optional = tokens.stream()
+			.filter(token -> env.getTypeUtils().isAssignable(token.getElement().asType(), element.asType()))
+			.filter(token -> !token.getElement().getModifiers().contains(Modifier.ABSTRACT))
+			.filter(token -> !token.getElement().getKind().isInterface())
+			.findFirst();
+		
+		if(optional.isPresent()) {
+			return resolve(optional.get());
+		}
+		
+		for (BeanToken token : tokens) {
+			for (BeanToken atBean : token.getAtBeans()) {
+				if(env.getTypeUtils().isAssignable(atBean.getElement().asType(), element.asType())) {
+					resolve(token);
+					return resolve(atBean);
+				}
+			}
+		}
+		return null; // TODO Handle
+	}
+
+}

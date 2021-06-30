@@ -17,11 +17,11 @@ import com.google.auto.service.AutoService;
 import com.homeprojects.di.core.BeanDefinition;
 import com.homeprojects.di.core.BeanToken;
 import com.homeprojects.di.core.DependeciesFinder;
-import com.homeprojects.di.core.DependenciesResolver2;
+import com.homeprojects.di.core.DependenciesResolver;
 import com.homeprojects.di.generators.Generator;
 import com.homeprojects.di.validation.ValidationException;
 
-@SupportedAnnotationTypes("com.homeprojects.di.annotations.Component")
+@SupportedAnnotationTypes({"com.homeprojects.di.annotations.Component", "com.homeprojects.di.annotations.Configuration"})
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 @AutoService(Processor.class)
 public class BeanProcessor extends AbstractProcessor {
@@ -31,7 +31,7 @@ public class BeanProcessor extends AbstractProcessor {
 		try {
 			List<BeanToken> tokens = new DependeciesFinder(roundEnvironment, processingEnv).find();
 			
-			DependenciesResolver2 resolver = new DependenciesResolver2(tokens, processingEnv);
+			DependenciesResolver resolver = new DependenciesResolver(tokens, processingEnv);
 			Queue<BeanDefinition> beans = resolver.resolve();
 			if(beans.isEmpty() || tokens.isEmpty()) {
 				return false;

@@ -54,9 +54,7 @@ public class DependeciesFinder {
 		BeanToken token = new BeanToken(element);
 		token.setType(type);
 		if(type.equals("component") || type.equals("configuration")) {
-			if(!element.getKind().equals(ElementKind.CLASS) || element.getModifiers().contains(Modifier.ABSTRACT)) {
-				throw new ValidationException("This can only be used on concrete classed", element);
-			}
+			validateAbstractType(element, type);
 			token.setInitializer(getConstructor(element));
 			token.setBeanName(getBeanName(element));
 			token.setScope(getScope(element));
@@ -71,12 +69,34 @@ public class DependeciesFinder {
 		return token;
 	}
 
+	private void validateAbstractType(TypeElement element, String type) {
+		if(!element.getKind().equals(ElementKind.CLASS) || element.getModifiers().contains(Modifier.ABSTRACT)) {
+			String annotation = type.equals("component") ? "@Component" : "@Configuration";
+			throw new ValidationException(annotation + " can only be used on concrete classed", element);
+		}
+	}
+
 	private ExecutableElement getConstructor(TypeElement element) {
-		return element.getEnclosedElements().stream()
-				.filter(e -> e.getKind().equals(ElementKind.CONSTRUCTOR))
-				.findFirst()
-				.map(e -> (ExecutableElement) e)
-				.orElseThrow(); // TODO Handle error
+		List<ExecutableElement> constructors = element.getEnclosedElements().stream()
+			.filter(e -> e.getKind().equals(ElementKind.CONSTRUCTOR))
+			.map(e -> (ExecutableElement) e)
+			.collect(Collectors.toList());
+		
+		if(constructors.size() == 1) {
+			return constructors.get(0);
+		}
+		List<ExecutableElement> autowiredConstructors = constructors.stream()
+				.filter(c -> c.getAnnotation(Autowired.class) != null)
+				.collect(Collectors.toList());
+		if(autowiredConstructors.size() == 1) {
+			return autowiredConstructors.get(0);
+		}
+		
+		if(autowiredConstructors.isEmpty()) {
+			throw new ValidationException("At least one constructor needs to be autowired", element);
+		}
+		
+		throw new ValidationException("Only one constructor can be autowired", element);
 	}
 	
 	private String getBeanName(TypeElement element) {
