@@ -1,5 +1,6 @@
 package com.homeprojects.di.generators;
 
+import static com.homeprojects.di.core.Utils.getPackageName;
 import static com.homeprojects.di.core.Utils.isSingleton;
 
 import java.io.IOException;
@@ -7,25 +8,18 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.PackageElement;
-import javax.lang.model.element.TypeElement;
 
 import com.homeprojects.di.annotations.GeneratedBeanInfo;
 import com.homeprojects.di.core.BeanDefinition;
 import com.homeprojects.di.core.Setter;
-import com.homeprojects.di.core.Utils;
 import com.homeprojects.di.core.beaninfo.AbstractBeanInfo;
 import com.homeprojects.di.core.beaninfo.AbstractSingletonBeanInfo;
-import com.homeprojects.di.core.beaninfo.BeanInfoRegister;
-import com.homeprojects.di.core.factory.BeanFactory;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.CodeBlock.Builder;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
@@ -144,9 +138,9 @@ public class BeanInfoGenerator {
 
 	private String getPackage() {
 		if(def.getParentConfig() == null) {
-			return Utils.getPackageName(def.getElement());
+			return getPackageName(def.getElement());
 		}
-		return Utils.getPackageName(def.getParentConfig().getElement());
+		return getPackageName(def.getParentConfig().getElement());
 	}
 
 	private TypeName getSuperClass() {

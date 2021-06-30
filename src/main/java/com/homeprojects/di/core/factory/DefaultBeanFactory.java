@@ -1,18 +1,17 @@
 package com.homeprojects.di.core.factory;
 
-import com.homeprojects.di.core.beaninfo.BeanInfo;
-import com.homeprojects.di.core.beaninfo.BeanInfoRegister;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import com.homeprojects.di.core.beaninfo.BeanInfo;
+
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class DefaultBeanFactory implements BeanFactory {
 
-    List<BeanInfo> beanInfos = new ArrayList<>();
+	List<BeanInfo> beanInfos = new ArrayList<>();
 
     public DefaultBeanFactory() {
-//        BeanInfoRegister.beans.forEach(fn -> beanInfos.add(fn.apply(this)));
     	ServiceLoader<BeanInfo> serviceLoader = ServiceLoader.load(BeanInfo.class);
     	for (BeanInfo beanInfo : serviceLoader) {
     		beanInfo.setBeanFactory(this);
