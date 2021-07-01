@@ -1,5 +1,6 @@
 package com.homeprojects.di.validation;
 
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 
 public class ValidationException extends RuntimeException {
@@ -13,6 +14,11 @@ public class ValidationException extends RuntimeException {
 	}
 	
 	public ValidationException(String message, Element element) {
+		super(message);
+		this.element = element;
+	}
+	
+	public ValidationException(String message, Element element, AnnotationMirror mirror) {
 		super(message);
 		this.element = element;
 	}

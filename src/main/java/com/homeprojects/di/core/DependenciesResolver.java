@@ -96,7 +96,11 @@ public class DependenciesResolver {
 	private BeanDefinition resolveParameter(VariableElement variableElement) {
 		TypeMirror type = variableElement.asType();
 		TypeElement dependecyElement = (TypeElement) env.getTypeUtils().asElement(type);
-		return findImplementation(dependecyElement);
+		BeanDefinition impl = findImplementation(dependecyElement);
+		if(impl == null) {
+			throw new ValidationException("No implementation found", variableElement);
+		}
+		return impl;
 	}
 	
 	private BeanDefinition findImplementation(TypeElement element) {
@@ -118,7 +122,7 @@ public class DependenciesResolver {
 				}
 			}
 		}
-		return null; // TODO Handle
+		return null;
 	}
 
 }
