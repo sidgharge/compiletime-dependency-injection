@@ -83,7 +83,7 @@ public class DependenciesResolver {
 	}
 
 	private void validateForCircularDependency(BeanToken token) {
-		if(!resolvingQueue.contains(token.getElement())) {
+		if(!resolvingQueue.contains(token.getBeanName())) {
 			return;
 		}
 		String direction = resolvingQueue.stream()
@@ -98,7 +98,7 @@ public class DependenciesResolver {
 		TypeElement dependecyElement = (TypeElement) env.getTypeUtils().asElement(type);
 		BeanDefinition impl = findImplementation(dependecyElement);
 		if(impl == null) {
-			throw new ValidationException("No implementation found", variableElement);
+			throw new ValidationException("No bean found", variableElement);
 		}
 		return impl;
 	}

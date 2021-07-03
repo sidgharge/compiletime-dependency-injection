@@ -47,7 +47,7 @@ public class BeanProcessor extends AbstractProcessor {
 			
 			new Generator(beans, processingEnv).generate();
 		} catch (ValidationException e) {
-			processingEnv.getMessager().printMessage(Kind.ERROR, e.getMessage(), e.getElement(), e.getMirror());
+			e.log(processingEnv.getMessager());
 		}
 		
 		return false;
