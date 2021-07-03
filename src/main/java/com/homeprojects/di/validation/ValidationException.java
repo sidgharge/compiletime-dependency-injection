@@ -9,6 +9,8 @@ public class ValidationException extends RuntimeException {
 	
 	private Element element;
 
+	private AnnotationMirror mirror;
+
 	public ValidationException(String message) {
 		super(message);
 	}
@@ -21,9 +23,14 @@ public class ValidationException extends RuntimeException {
 	public ValidationException(String message, Element element, AnnotationMirror mirror) {
 		super(message);
 		this.element = element;
+		this.mirror = mirror;
 	}
 	
 	public Element getElement() {
 		return element;
+	}
+	
+	public AnnotationMirror getMirror() {
+		return mirror;
 	}
 }

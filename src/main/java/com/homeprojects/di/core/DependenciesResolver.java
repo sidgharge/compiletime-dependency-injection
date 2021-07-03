@@ -30,7 +30,7 @@ public class DependenciesResolver {
 	
 	private final Queue<BeanDefinition> queue;
 	
-	private final Set<TypeElement> resolvingQueue = new LinkedHashSet<>();
+	private final Set<String> resolvingQueue = new LinkedHashSet<>();
 
 	public DependenciesResolver(List<BeanToken> tokens, ProcessingEnvironment processingEnv) {
 		this.tokens = tokens;
@@ -48,7 +48,7 @@ public class DependenciesResolver {
 
 	private BeanDefinition resolve(BeanToken token) {
 		validateForCircularDependency(token);
-		resolvingQueue.add(token.getElement());
+		resolvingQueue.add(token.getBeanName());
 		if(map.containsKey(token)) {
 			return map.get(token);
 		}
@@ -72,7 +72,7 @@ public class DependenciesResolver {
 		
 		map.put(token, definition);
 		queue.add(definition);
-		resolvingQueue.remove(token.getElement());
+		resolvingQueue.remove(token.getBeanName());
 
 		token.getAtBeans()
 			.stream()
@@ -87,7 +87,7 @@ public class DependenciesResolver {
 			return;
 		}
 		String direction = resolvingQueue.stream()
-			.map(e -> e.getSimpleName())
+			// .map(e -> e.getSimpleName())
 			.collect(Collectors.joining(" -> "));
 		
 		throw new ValidationException("Circular dependency found: " + direction);

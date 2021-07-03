@@ -9,15 +9,18 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 
 import com.homeprojects.di.annotations.Autowired;
 import com.homeprojects.di.annotations.Bean;
 import com.homeprojects.di.annotations.Component;
 import com.homeprojects.di.annotations.Configuration;
+import com.homeprojects.di.processors.BeanProcessor;
 import com.homeprojects.di.validation.ValidationException;
 
 public class DependeciesFinder {
@@ -71,8 +74,14 @@ public class DependeciesFinder {
 
 	private void validateAbstractType(TypeElement element, String type) {
 		if(!element.getKind().equals(ElementKind.CLASS) || element.getModifiers().contains(Modifier.ABSTRACT)) {
-			String annotation = type.equals("component") ? "@Component" : "@Configuration";
-			throw new ValidationException(annotation + " can only be used on concrete classed", element);
+			List<? extends AnnotationMirror> mirrors = processingEnv.getElementUtils().getAllAnnotationMirrors(element);
+			for (AnnotationMirror mirror : mirrors) {
+				DeclaredType declaredType = mirror.getAnnotationType();
+				String annotationName = ((TypeElement)declaredType.asElement()).getQualifiedName().toString();
+				if(BeanProcessor.SUPPORTED_ANNOTATIONS.contains(annotationName)) {
+					throw new ValidationException("This annotation can only be used on concrete classed", element, mirror);
+				}
+			}
 		}
 	}
 

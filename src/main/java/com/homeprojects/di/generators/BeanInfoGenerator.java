@@ -44,7 +44,8 @@ public class BeanInfoGenerator {
 				.superclass(getSuperClass())
 				.addAnnotation(GeneratedBeanInfo.class)
 				.addMethod(getConstructor())
-				.addMethod(getBuildMethod());
+				.addMethod(getBuildMethod())
+				.addMethod(getNameMethod());
 		
 		if(!isSingleton(def)) {
 			builder.addMethod(getGetInstanceMethod());
@@ -59,6 +60,15 @@ public class BeanInfoGenerator {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private MethodSpec getNameMethod() {
+		return MethodSpec.methodBuilder("name")
+					.addAnnotation(Override.class)
+					.returns(String.class)
+					.addModifiers(Modifier.PUBLIC)
+					.addStatement("return $S", def.getName())
+					.build();
 	}
 
 	private MethodSpec getGetTypeMethod() {

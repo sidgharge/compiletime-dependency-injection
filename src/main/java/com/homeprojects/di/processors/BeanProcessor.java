@@ -1,5 +1,6 @@
 package com.homeprojects.di.processors;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
@@ -21,10 +22,17 @@ import com.homeprojects.di.core.DependenciesResolver;
 import com.homeprojects.di.generators.Generator;
 import com.homeprojects.di.validation.ValidationException;
 
-@SupportedAnnotationTypes({"com.homeprojects.di.annotations.Component", "com.homeprojects.di.annotations.Configuration"})
+//@SupportedAnnotationTypes({"com.homeprojects.di.annotations.Component", "com.homeprojects.di.annotations.Configuration"})
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 @AutoService(Processor.class)
 public class BeanProcessor extends AbstractProcessor {
+	
+	public static Set<String> SUPPORTED_ANNOTATIONS = new HashSet<>();
+	
+	static {
+		SUPPORTED_ANNOTATIONS.add("com.homeprojects.di.annotations.Component");
+		SUPPORTED_ANNOTATIONS.add("com.homeprojects.di.annotations.Configuration");
+	}
 	
 	@Override
 	public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnvironment) {
@@ -39,7 +47,7 @@ public class BeanProcessor extends AbstractProcessor {
 			
 			new Generator(beans, processingEnv).generate();
 		} catch (ValidationException e) {
-			processingEnv.getMessager().printMessage(Kind.ERROR, e.getMessage(), e.getElement());
+			processingEnv.getMessager().printMessage(Kind.ERROR, e.getMessage(), e.getElement(), e.getMirror());
 		}
 		
 		return false;
@@ -47,6 +55,11 @@ public class BeanProcessor extends AbstractProcessor {
 	
 	public void print(String text) {
 		processingEnv.getMessager().printMessage(Kind.WARNING, text);
+	}
+	
+	@Override
+	public Set<String> getSupportedAnnotationTypes() {
+		return SUPPORTED_ANNOTATIONS;
 	}
 
 }
