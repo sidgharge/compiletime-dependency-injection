@@ -51,6 +51,8 @@ public class BeanInfoGenerator {
 			builder.addMethod(getGetInstanceMethod());
 			builder.addMethod(getGetTypeMethod());
 			builder.addMethod(getGetScopeMethod());
+		} else {
+			builder.addMethod(getRunDestroysMethod());
 		}
 
 		JavaFile file = JavaFile.builder(getPackage(), builder.build()).build();
@@ -60,6 +62,23 @@ public class BeanInfoGenerator {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private MethodSpec getRunDestroysMethod() {
+		return MethodSpec.methodBuilder("runPreDestroys")
+				.addAnnotation(Override.class)
+				.addModifiers(Modifier.PUBLIC)
+				.returns(void.class)
+				.addCode(getRunDestroysMethodBody())
+				.build();
+	}
+
+	private CodeBlock getRunDestroysMethodBody() {
+		Builder builder = CodeBlock.builder();
+		for(String pdm: def.getPreDestroyMethods()) {
+			builder.addStatement("instance.$L()", pdm);
+		}
+		return builder.build();
 	}
 
 	private MethodSpec getNameMethod() {

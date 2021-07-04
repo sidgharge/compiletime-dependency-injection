@@ -14,6 +14,9 @@ public interface BeanInfo<T> {
 
     String getScope();
     
+    default void runPreDestroys() {
+    }
+    
     void setBeanFactory(BeanFactory beanFactory);
     
     default boolean isSingleton() {

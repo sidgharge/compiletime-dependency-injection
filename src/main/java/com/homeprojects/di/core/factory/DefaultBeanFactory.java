@@ -50,6 +50,8 @@ public class DefaultBeanFactory implements BeanFactory {
 
     @Override
     public void close() throws Exception {
-
+    	for (BeanInfo beanInfo : beanInfos) {
+    		beanInfo.runPreDestroys();
+    	}
     }
 }
