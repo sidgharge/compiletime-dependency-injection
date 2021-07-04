@@ -10,6 +10,7 @@ import javax.annotation.PreDestroy;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -152,11 +153,19 @@ public class DependeciesFinder {
 	}
 
 	private <A extends Annotation> List<ExecutableElement> getMethodsAnnotatedWith(TypeElement element, Class<A> clazz) {
-		return element.getEnclosedElements()
-			.stream()
-			.filter(ee -> ee.getKind().equals(ElementKind.METHOD))
-			.filter(method -> method.getAnnotation(clazz) != null)
-			.map(method -> (ExecutableElement) method)
-			.collect(Collectors.toList());
+		List<ExecutableElement> methods = new ArrayList<>();
+		for(Element e: element.getEnclosedElements()) {
+			if(!e.getKind().equals(ElementKind.METHOD) || e.getAnnotation(clazz) == null) {
+				continue;
+			}
+			ExecutableElement method = (ExecutableElement) e;
+			if(method.getModifiers().contains(Modifier.PRIVATE)) {
+				throw new ValidationException("Method with @" + clazz.getSimpleName() + " should not be private", method);
+			}
+			methods.add(method);
+		}
+		return methods;
+		
 	}
+	
 }
