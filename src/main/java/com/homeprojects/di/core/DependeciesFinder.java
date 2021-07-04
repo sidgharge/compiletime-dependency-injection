@@ -59,7 +59,7 @@ public class DependeciesFinder {
 		token.setType(type);
 		if(type.equals("component") || type.equals("configuration")) {
 			validateAbstractType(element, type);
-			token.setInitializer(getConstructor(element));
+			token.setInitializer(validateConstructorNotPrivate(getConstructor(element)));
 			token.setBeanName(getBeanName(element));
 			token.setScope(getScope(element));
 			token.setExactType(element.asType());
@@ -107,6 +107,13 @@ public class DependeciesFinder {
 		}
 		
 		throw new ValidationException("Only one constructor can be autowired", element);
+	}
+	
+	private ExecutableElement validateConstructorNotPrivate(ExecutableElement constructor) {
+		if(constructor.getModifiers().contains(Modifier.PRIVATE)) {
+			throw new ValidationException("Constructor cannot be private", constructor);
+		}
+		return constructor;
 	}
 	
 	private String getBeanName(TypeElement element) {
