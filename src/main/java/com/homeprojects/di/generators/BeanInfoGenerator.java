@@ -138,7 +138,7 @@ public class BeanInfoGenerator {
 		Builder builder = CodeBlock.builder();
 		
 		for (BeanDefinition dependency : def.getDependencies()) {
-			builder.addStatement("$T $L = beanFactory.getBean($T.class)", dependency.getExactType(), dependency.getName(), dependency.getElement());
+			builder.addStatement("$T $L = beanFactory.getBean($S, $T.class)", dependency.getExactType(), dependency.getName(), dependency.getName(), dependency.getElement());
 		}
 		
 		String dependencyNamesCommaSeprataed = def.getDependencies().stream()
@@ -210,21 +210,12 @@ public class BeanInfoGenerator {
 	}
 
 	private CodeBlock getSetterCode(Setter setter) {
-		String dependencyListCommaSeprataed = setter.getDependencies()
-				.stream()
-				.map(dependency -> "beanFactory.getBean($" + dependency.getName() + ":T.class)")
-				.collect(Collectors.joining(", "));
-		
-		Map<String, ?> map = setter.getDependencies()
-				.stream()
-				.collect(Collectors.toMap(dep -> dep.getName(), dep -> dep.getElement()));
-		
 		Builder builder = CodeBlock.builder();
-		
 		builder.add("$L.$L(", def.getName(),setter.getName());
-		builder.addNamed(dependencyListCommaSeprataed, map);
+		for (BeanDefinition dependency : setter.getDependencies()) {
+			builder.add("beanFactory.getBean($S, $T.class)", dependency.getName(), dependency.getElement());
+		}
 		builder.addStatement(")");
-		
 		return builder.build();
 	}
 }

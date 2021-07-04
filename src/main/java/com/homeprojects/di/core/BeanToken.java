@@ -119,4 +119,9 @@ public class BeanToken {
 	public List<ExecutableElement> getSetters() {
 		return setters;
 	}
+	
+	@Override
+	public String toString() {
+		return beanName;
+	}
 }
