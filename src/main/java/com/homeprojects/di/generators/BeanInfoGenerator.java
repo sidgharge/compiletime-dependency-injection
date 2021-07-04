@@ -44,12 +44,15 @@ public class BeanInfoGenerator {
 				.superclass(getSuperClass())
 				.addAnnotation(GeneratedBeanInfo.class)
 				.addMethod(getConstructor())
-				.addMethod(getBuildMethod());
+				.addMethod(getBuildMethod())
+				.addMethod(getNameMethod());
 		
 		if(!isSingleton(def)) {
 			builder.addMethod(getGetInstanceMethod());
 			builder.addMethod(getGetTypeMethod());
 			builder.addMethod(getGetScopeMethod());
+		} else {
+			builder.addMethod(getRunDestroysMethod());
 		}
 
 		JavaFile file = JavaFile.builder(getPackage(), builder.build()).build();
@@ -59,6 +62,32 @@ public class BeanInfoGenerator {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private MethodSpec getRunDestroysMethod() {
+		return MethodSpec.methodBuilder("runPreDestroys")
+				.addAnnotation(Override.class)
+				.addModifiers(Modifier.PUBLIC)
+				.returns(void.class)
+				.addCode(getRunDestroysMethodBody())
+				.build();
+	}
+
+	private CodeBlock getRunDestroysMethodBody() {
+		Builder builder = CodeBlock.builder();
+		for(String pdm: def.getPreDestroyMethods()) {
+			builder.addStatement("instance.$L()", pdm);
+		}
+		return builder.build();
+	}
+
+	private MethodSpec getNameMethod() {
+		return MethodSpec.methodBuilder("name")
+					.addAnnotation(Override.class)
+					.returns(String.class)
+					.addModifiers(Modifier.PUBLIC)
+					.addStatement("return $S", def.getName())
+					.build();
 	}
 
 	private MethodSpec getGetTypeMethod() {
@@ -109,7 +138,7 @@ public class BeanInfoGenerator {
 		Builder builder = CodeBlock.builder();
 		
 		for (BeanDefinition dependency : def.getDependencies()) {
-			builder.addStatement("$T $L = beanFactory.getBean($T.class)", dependency.getExactType(), dependency.getName(), dependency.getElement());
+			builder.addStatement("$T $L = beanFactory.getBean($S, $T.class)", dependency.getExactType(), dependency.getName(), dependency.getName(), dependency.getElement());
 		}
 		
 		String dependencyNamesCommaSeprataed = def.getDependencies().stream()
@@ -181,21 +210,12 @@ public class BeanInfoGenerator {
 	}
 
 	private CodeBlock getSetterCode(Setter setter) {
-		String dependencyListCommaSeprataed = setter.getDependencies()
-				.stream()
-				.map(dependency -> "beanFactory.getBean($" + dependency.getName() + ":T.class)")
-				.collect(Collectors.joining(", "));
-		
-		Map<String, ?> map = setter.getDependencies()
-				.stream()
-				.collect(Collectors.toMap(dep -> dep.getName(), dep -> dep.getElement()));
-		
 		Builder builder = CodeBlock.builder();
-		
 		builder.add("$L.$L(", def.getName(),setter.getName());
-		builder.addNamed(dependencyListCommaSeprataed, map);
+		for (BeanDefinition dependency : setter.getDependencies()) {
+			builder.add("beanFactory.getBean($S, $T.class)", dependency.getName(), dependency.getElement());
+		}
 		builder.addStatement(")");
-		
 		return builder.build();
 	}
 }

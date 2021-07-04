@@ -6,7 +6,6 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,7 +29,7 @@ public class DependenciesResolver {
 	
 	private final Queue<BeanDefinition> queue;
 	
-	private final Set<TypeElement> resolvingQueue = new LinkedHashSet<>();
+	private final Set<String> resolvingQueue = new LinkedHashSet<>();
 
 	public DependenciesResolver(List<BeanToken> tokens, ProcessingEnvironment processingEnv) {
 		this.tokens = tokens;
@@ -48,10 +47,10 @@ public class DependenciesResolver {
 
 	private BeanDefinition resolve(BeanToken token) {
 		validateForCircularDependency(token);
-		resolvingQueue.add(token.getElement());
 		if(map.containsKey(token)) {
 			return map.get(token);
 		}
+		resolvingQueue.add(token.getBeanName());
 		ExecutableElement initializer = token.getInitializer();
 		
 		List<BeanDefinition> dependencies = initializer.getParameters()
@@ -72,7 +71,7 @@ public class DependenciesResolver {
 		
 		map.put(token, definition);
 		queue.add(definition);
-		resolvingQueue.remove(token.getElement());
+		resolvingQueue.remove(token.getBeanName());
 
 		token.getAtBeans()
 			.stream()
@@ -83,11 +82,11 @@ public class DependenciesResolver {
 	}
 
 	private void validateForCircularDependency(BeanToken token) {
-		if(!resolvingQueue.contains(token.getElement())) {
+		if(!resolvingQueue.contains(token.getBeanName())) {
 			return;
 		}
 		String direction = resolvingQueue.stream()
-			.map(e -> e.getSimpleName())
+			// .map(e -> e.getSimpleName())
 			.collect(Collectors.joining(" -> "));
 		
 		throw new ValidationException("Circular dependency found: " + direction);
@@ -96,33 +95,65 @@ public class DependenciesResolver {
 	private BeanDefinition resolveParameter(VariableElement variableElement) {
 		TypeMirror type = variableElement.asType();
 		TypeElement dependecyElement = (TypeElement) env.getTypeUtils().asElement(type);
-		BeanDefinition impl = findImplementation(dependecyElement);
+		BeanDefinition impl = findImplementation(dependecyElement, variableElement);
 		if(impl == null) {
-			throw new ValidationException("No implementation found", variableElement);
+			throw new ValidationException("No bean found", variableElement);
 		}
 		return impl;
 	}
 	
-	private BeanDefinition findImplementation(TypeElement element) {
-		Optional<BeanToken> optional = tokens.stream()
+	private BeanDefinition findImplementation(TypeElement element, VariableElement variable) {
+		List<BeanToken> implementations = findImplementations(element, tokens);
+		BeanToken implementation = findExactImplementation(implementations, variable);
+		if(implementation != null) {
+			return resolve(implementation);
+		}
+		
+		List<BeanToken> implementations2 = tokens.stream()
+			.flatMap(token -> token.getAtBeans().stream())
+			.filter(atBean -> env.getTypeUtils().isAssignable(atBean.getElement().asType(), element.asType()))
+			.collect(Collectors.toList());
+		implementation = findExactImplementation(implementations2, variable);
+		if(implementation != null) {
+			return resolve(implementation);
+		}
+		
+		implementations = new ArrayList<>(implementations);
+		implementations.addAll(implementations2);
+		
+		if(implementations.isEmpty()) {
+			throw new ValidationException("No bean found", variable);
+		}
+		if(implementations.size() > 1) {
+			throw new ValidationException("Multiple beans found", variable);
+		}
+		
+		return resolve(implementations.get(0));
+	}
+
+	private List<BeanToken> findImplementations(TypeElement element, List<BeanToken> tokens) {
+		return tokens.stream()
 			.filter(token -> env.getTypeUtils().isAssignable(token.getElement().asType(), element.asType()))
 			.filter(token -> !token.getElement().getModifiers().contains(Modifier.ABSTRACT))
 			.filter(token -> !token.getElement().getKind().isInterface())
-			.findFirst();
-		
-		if(optional.isPresent()) {
-			return resolve(optional.get());
-		}
-		
-		for (BeanToken token : tokens) {
-			for (BeanToken atBean : token.getAtBeans()) {
-				if(env.getTypeUtils().isAssignable(atBean.getElement().asType(), element.asType())) {
-					resolve(token);
-					return resolve(atBean);
-				}
-			}
-		}
-		return null;
+			.collect(Collectors.toList());
+	}
+	
+	private BeanToken findExactImplementation(List<BeanToken> implementations, VariableElement variable) {
+//		if(implementations.size() == 1) {
+//			return resolve(implementations.get(0));
+//		} else if(implementations.size() > 1) {
+//			for (BeanToken token : implementations) {
+//				if(token.getBeanName().equals(variable.getSimpleName().toString())) {
+//					return resolve(token);
+//				}
+//			}
+//		}
+//		return null;
+		return implementations.stream()
+				.filter(token -> token.getBeanName().equals(variable.getSimpleName().toString()))
+				.findFirst()
+				.orElse(null);
 	}
 
 }

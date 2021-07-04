@@ -3,6 +3,8 @@ package com.homeprojects.di.core.beaninfo;
 import com.homeprojects.di.core.factory.BeanFactory;
 
 public interface BeanInfo<T> {
+	
+	String name();
 
     T build();
 
@@ -11,6 +13,9 @@ public interface BeanInfo<T> {
     Class<?> getType();
 
     String getScope();
+    
+    default void runPreDestroys() {
+    }
     
     void setBeanFactory(BeanFactory beanFactory);
     
