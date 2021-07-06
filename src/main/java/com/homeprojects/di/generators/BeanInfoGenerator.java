@@ -30,9 +30,12 @@ public class BeanInfoGenerator {
 	private final BeanDefinition def;
 	
 	private final ProcessingEnvironment env;
+	
+	private final int index;
 
-	public BeanInfoGenerator(BeanDefinition bean, ProcessingEnvironment env) {
+	public BeanInfoGenerator(BeanDefinition bean, int index, ProcessingEnvironment env) {
 		this.def = bean;
+		this.index = index;
 		this.env = env;
 	}
 
@@ -45,7 +48,8 @@ public class BeanInfoGenerator {
 				.addAnnotation(GeneratedBeanInfo.class)
 				.addMethod(getConstructor())
 				.addMethod(getBuildMethod())
-				.addMethod(getNameMethod());
+				.addMethod(getNameMethod())
+				.addMethod(getGetDependencyIndexMethod());
 		
 		if(!isSingleton(def)) {
 			builder.addMethod(getGetInstanceMethod());
@@ -62,6 +66,15 @@ public class BeanInfoGenerator {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private MethodSpec getGetDependencyIndexMethod() {
+		return MethodSpec.methodBuilder("getDependecyIndex")
+				.addAnnotation(Override.class)
+				.addModifiers(Modifier.PUBLIC)
+				.returns(int.class)
+				.addStatement("return $L", index)
+				.build();
 	}
 
 	private MethodSpec getRunDestroysMethod() {

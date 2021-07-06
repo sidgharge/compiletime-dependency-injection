@@ -1,8 +1,6 @@
 package com.homeprojects.di.generators;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
 
 import javax.annotation.processing.ProcessingEnvironment;
 
@@ -14,14 +12,14 @@ public class Generator {
 
 	private final ProcessingEnvironment env;
 
-	public Generator(Queue<BeanDefinition> beans, ProcessingEnvironment env) {
-		this.beans = new ArrayList<>(beans);
+	public Generator(List<BeanDefinition> beans, ProcessingEnvironment env) {
+		this.beans = beans;
 		this.env = env;
 	}
 
 	public void generate() {
-		for (BeanDefinition beanDefinition : beans) {
-			new BeanInfoGenerator(beanDefinition, env).processBeanDefinition();
+		for (int i = 0; i < beans.size(); i++) {
+			new BeanInfoGenerator(beans.get(i), i, env).processBeanDefinition();
 		}
 	}	
 

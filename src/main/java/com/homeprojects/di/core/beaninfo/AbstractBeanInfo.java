@@ -13,4 +13,9 @@ public abstract class AbstractBeanInfo<T> implements BeanInfo<T> {
     public void setBeanFactory(BeanFactory beanFactory) {
     	this.beanFactory = beanFactory;
     }
+    
+    @Override
+    public String toString() {
+    	return this.getClass().getSimpleName() + ": " + getDependecyIndex();
+    }
 }

@@ -88,4 +88,9 @@ public class BeanDefinition {
 	public List<Setter> getSetters() {
 		return setters;
 	}
+	
+	@Override
+	public String toString() {
+		return name;
+	}
 }

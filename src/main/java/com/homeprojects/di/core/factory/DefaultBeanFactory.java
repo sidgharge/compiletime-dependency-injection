@@ -2,6 +2,8 @@ package com.homeprojects.di.core.factory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.ServiceLoader;
 
 import com.homeprojects.di.core.BeanException;
@@ -14,9 +16,13 @@ public class DefaultBeanFactory implements BeanFactory {
 
     public DefaultBeanFactory() {
     	ServiceLoader<BeanInfo> serviceLoader = ServiceLoader.load(BeanInfo.class);
+    	Queue<BeanInfo> temp = new PriorityQueue<>((b1, b2) -> b1.getDependecyIndex() - b2.getDependecyIndex()); 
     	for (BeanInfo beanInfo : serviceLoader) {
+    		temp.add(beanInfo);
+		}
+    	for (BeanInfo beanInfo : temp) {
     		beanInfo.setBeanFactory(this);
-			beanInfos.add(beanInfo);
+    		beanInfos.add(beanInfo);
 		}
     }
 
@@ -26,7 +32,7 @@ public class DefaultBeanFactory implements BeanFactory {
         for (BeanInfo beanInfo : beanInfos) {
             if(beanInfo.getType() == clazz) {
             	if(bean != null) {
-            		throw new BeanException("Multiple beans of this type exist. Consider providing name for the bean.");
+            		throw new BeanException("Multiple beans of this type " + clazz + ". Consider providing name for the bean.");
             	}
                 bean = beanInfo.getInstance();
             }
@@ -35,7 +41,7 @@ public class DefaultBeanFactory implements BeanFactory {
         if(bean != null) {
         	return (T) bean;
         }
-        throw new BeanException("No bean of this type exists");
+        throw new BeanException("No bean of type " + clazz + " exists");
     }
     
     @Override
@@ -45,7 +51,7 @@ public class DefaultBeanFactory implements BeanFactory {
                 return (T) beanInfo.getInstance();
             }
         }
-        throw new BeanException("No bean exists with this name and type");
+        throw new BeanException(String.format("No bean exists with name '%s' and %s", name, clazz));
     }
 
     @Override

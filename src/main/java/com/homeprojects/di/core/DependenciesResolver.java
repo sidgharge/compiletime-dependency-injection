@@ -3,10 +3,8 @@ package com.homeprojects.di.core;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,18 +25,18 @@ public class DependenciesResolver {
 
 	private final Map<BeanToken, BeanDefinition> map;
 	
-	private final Queue<BeanDefinition> queue;
+	private final List<BeanDefinition> queue;
 	
 	private final Set<String> resolvingQueue = new LinkedHashSet<>();
-
+	
 	public DependenciesResolver(List<BeanToken> tokens, ProcessingEnvironment processingEnv) {
 		this.tokens = tokens;
 		this.env = processingEnv;
 		map = new HashMap<>();
-		queue = new LinkedList<>();
+		queue = new ArrayList<>();
 	}
 
-	public Queue<BeanDefinition> resolve() {
+	public List<BeanDefinition> resolve() {
 		for (BeanToken token : tokens) {
 			resolve(token);
 		}
@@ -115,6 +113,7 @@ public class DependenciesResolver {
 			.collect(Collectors.toList());
 		implementation = findExactImplementation(implementations2, variable);
 		if(implementation != null) {
+			resolve(implementation.getParentConfiguration());
 			return resolve(implementation);
 		}
 		
@@ -128,6 +127,10 @@ public class DependenciesResolver {
 			throw new ValidationException("Multiple beans found", variable);
 		}
 		
+		implementation = implementations.get(0);
+		if(implementation.getParentConfiguration() != null) {
+			resolve(implementation.getParentConfiguration());
+		}
 		return resolve(implementations.get(0));
 	}
 

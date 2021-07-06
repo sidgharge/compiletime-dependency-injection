@@ -14,6 +14,8 @@ public interface BeanInfo<T> {
 
     String getScope();
     
+    int getDependecyIndex();
+    
     default void runPreDestroys() {
     }
     
