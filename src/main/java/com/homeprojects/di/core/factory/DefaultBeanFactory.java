@@ -30,7 +30,7 @@ public class DefaultBeanFactory implements BeanFactory {
     public <T> T getBean(Class<T> clazz) {
     	Object bean = null;
         for (BeanInfo beanInfo : beanInfos) {
-            if(beanInfo.getType() == clazz) {
+            if(beanInfo.getType() == clazz || clazz.isAssignableFrom(beanInfo.getType())) {
             	if(bean != null) {
             		throw new BeanException("Multiple beans of this type " + clazz + ". Consider providing name for the bean.");
             	}
