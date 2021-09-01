@@ -39,29 +39,41 @@ public class DependeciesFinder {
 	}
 
 	public List<BeanToken> find() {
-		roundEnvironment
-				.getElementsAnnotatedWith(Component.class)
-				.stream()
-				.map(element -> (TypeElement) element)
-				.forEach(element -> processComponent(element, "component"));
+		findComponents();
 		
-		roundEnvironment
-				.getElementsAnnotatedWith(Configuration.class)
-				.stream()
-				.map(element -> (TypeElement) element)
-				.forEach(this::processConfiguration);
+		findConfigs();
 		
 		return tokens;
 	}
 
-	private BeanToken processComponent(TypeElement element, String type) {
+	private void findComponents() {
+		for(Element element: roundEnvironment.getElementsAnnotatedWith(Component.class)) {
+			if(element.getKind().equals(ElementKind.ANNOTATION_TYPE)) {
+				processInheritedAnnotation((TypeElement) element, element.getAnnotation(Component.class));
+			} else {
+				processComponent((TypeElement) element, "component", element.getAnnotation(Component.class));				
+			}
+		}
+	}
+	
+	private void findConfigs() {
+		for(Element element: roundEnvironment.getElementsAnnotatedWith(Configuration.class)) {
+			if(element.getKind().equals(ElementKind.ANNOTATION_TYPE)) {
+				processInheritedAnnotation((TypeElement) element, element.getAnnotation(Configuration.class));
+			} else {
+				processConfiguration((TypeElement) element, element.getAnnotation(Configuration.class));
+			}
+		}
+	}
+
+	private BeanToken processComponent(TypeElement element, String type, Annotation annotation) {
 		BeanToken token = new BeanToken(element);
 		token.setType(type);
 		if(type.equals("component") || type.equals("configuration")) {
 			validateAbstractType(element, type);
 			token.setInitializer(validateConstructorNotPrivate(getConstructor(element)));
-			token.setBeanName(getBeanName(element));
-			token.setScope(getScope(element));
+			token.setBeanName(getBeanName(element, annotation));
+			token.setScope(getScope(element, annotation));
 			token.setExactType(element.asType());
 			tokens.add(token);
 		}
@@ -71,6 +83,20 @@ public class DependeciesFinder {
 		token.setPreDestroys(getMethodsAnnotatedWith(element, PreDestroy.class));
 		
 		return token;
+	}
+
+	private void processInheritedAnnotation(TypeElement element, Annotation annotation) {
+		for(Element e: roundEnvironment.getElementsAnnotatedWith(element)) {
+			if(e.getKind().equals(ElementKind.ANNOTATION_TYPE)) {
+				processInheritedAnnotation((TypeElement) e, annotation);
+			} else {
+				if(annotation.getClass().equals(Component.class)) {
+					processComponent((TypeElement) e, "component", annotation);
+				} else {
+					processConfiguration((TypeElement) e, annotation);
+				}
+			}
+		}
 	}
 
 	private void validateAbstractType(TypeElement element, String type) {
@@ -116,34 +142,35 @@ public class DependeciesFinder {
 		return constructor;
 	}
 	
-	private String getBeanName(TypeElement element) {
-		String name = "";
-		Component component = element.getAnnotation(Component.class);
-		if(component != null) {
-			name = component.name();
+	private String getBeanName(TypeElement element, Annotation annotation) {
+		String name = null;
+		if(annotation instanceof Component) {
+			name = ((Component) annotation).name();
 		}
-		if(name.isEmpty()) {
+		if(name == null || name.isEmpty()) {
 			name = element.getSimpleName().toString();
 			name = name.length() == 1 ? name.toLowerCase() : Character.toLowerCase(name.charAt(0)) + name.substring(1);
 		}
 		return name;
 	}
 	
-	private String getScope(TypeElement element) {
-		Component component = element.getAnnotation(Component.class);
-		return component == null ? "singleton" : component.scope();
+	private String getScope(TypeElement element, Annotation annotation) {
+		if(annotation instanceof Component) {
+			return ((Component) annotation).scope();
+		}
+		return "singleton";
 	}
 	
-	private void processConfiguration(TypeElement element) {
-		BeanToken token = processComponent(element, "configuration");
+	private void processConfiguration(TypeElement element, Annotation annotation) {
+		BeanToken token = processComponent(element, "configuration", annotation);
 		
 		List<ExecutableElement> beanMethods = getMethodsAnnotatedWith(element, Bean.class);
-		beanMethods.forEach(bm -> proccessBeanMethod(token, bm));
+		beanMethods.forEach(bm -> proccessBeanMethod(token, bm, annotation));
 	}
 	
-	private void proccessBeanMethod(BeanToken parent, ExecutableElement beanMethod) {
+	private void proccessBeanMethod(BeanToken parent, ExecutableElement beanMethod, Annotation annotation) {
 		TypeElement element = (TypeElement) processingEnv.getTypeUtils().asElement(beanMethod.getReturnType());
-		BeanToken token = processComponent(element, "atbean");
+		BeanToken token = processComponent(element, "atbean", annotation);
 		token.setInitializer(beanMethod);
 		
 		token.setBeanName(getAtBeanBeanName(beanMethod));
