@@ -40,9 +40,7 @@ public class DependeciesFinder {
 
 	public List<BeanToken> find() {
 		findComponents();
-		
 		findConfigs();
-		
 		return tokens;
 	}
 
@@ -51,26 +49,31 @@ public class DependeciesFinder {
 			if(element.getKind().equals(ElementKind.ANNOTATION_TYPE)) {
 				processInheritedAnnotation((TypeElement) element, element.getAnnotation(Component.class));
 			} else {
-				processComponent((TypeElement) element, "component", element.getAnnotation(Component.class));				
+				processComponent((TypeElement) element, BeanType.COMPONENT, element.getAnnotation(Component.class));				
 			}
 		}
 	}
 	
 	private void findConfigs() {
-		for(Element element: roundEnvironment.getElementsAnnotatedWith(Configuration.class)) {
-			if(element.getKind().equals(ElementKind.ANNOTATION_TYPE)) {
-				processInheritedAnnotation((TypeElement) element, element.getAnnotation(Configuration.class));
-			} else {
-				processConfiguration((TypeElement) element, element.getAnnotation(Configuration.class));
-			}
-		}
+		// Doing this because @Configuration is already compiled
+		// and compiler won't find it
+		// So we're getting it from classpath
+		TypeElement configElement = processingEnv.getElementUtils().getTypeElement(Configuration.class.getName());
+		processInheritedAnnotation(configElement, configElement.getAnnotation(Component.class));
+//		for(Element element: roundEnvironment.getElementsAnnotatedWith(Configuration.class)) {
+//			if(element.getKind().equals(ElementKind.ANNOTATION_TYPE)) {
+//				processInheritedAnnotation((TypeElement) element, element.getAnnotation(Configuration.class));
+//			} else {
+//				processConfiguration((TypeElement) element, element.getAnnotation(Configuration.class));
+//			}
+//		}
 	}
 
-	private BeanToken processComponent(TypeElement element, String type, Annotation annotation) {
+	private BeanToken processComponent(TypeElement element, BeanType type, Annotation annotation) {
 		BeanToken token = new BeanToken(element);
-		token.setType(type);
-		if(type.equals("component") || type.equals("configuration")) {
-			validateAbstractType(element, type);
+		token.setType(type.getValue());
+		if(type.equals(BeanType.COMPONENT)) {
+			validateAbstractType(element);
 			token.setInitializer(validateConstructorNotPrivate(getConstructor(element)));
 			token.setBeanName(getBeanName(element, annotation));
 			token.setScope(getScope(element, annotation));
@@ -78,6 +81,7 @@ public class DependeciesFinder {
 			tokens.add(token);
 		}
 		
+		getMethodsAnnotatedWith(element, Bean.class).forEach(bm -> proccessBeanMethod(token, bm, annotation));
 		token.setSetters(getMethodsAnnotatedWith(element, Autowired.class));
 		token.setPostConstructs(getMethodsAnnotatedWith(element, PostConstruct.class));
 		token.setPreDestroys(getMethodsAnnotatedWith(element, PreDestroy.class));
@@ -90,16 +94,12 @@ public class DependeciesFinder {
 			if(e.getKind().equals(ElementKind.ANNOTATION_TYPE)) {
 				processInheritedAnnotation((TypeElement) e, annotation);
 			} else {
-				if(annotation.getClass().equals(Component.class)) {
-					processComponent((TypeElement) e, "component", annotation);
-				} else {
-					processConfiguration((TypeElement) e, annotation);
-				}
+				processComponent((TypeElement) e, BeanType.COMPONENT, annotation);
 			}
 		}
 	}
 
-	private void validateAbstractType(TypeElement element, String type) {
+	private void validateAbstractType(TypeElement element) {
 		if(!element.getKind().equals(ElementKind.CLASS) || element.getModifiers().contains(Modifier.ABSTRACT)) {
 			List<? extends AnnotationMirror> mirrors = processingEnv.getElementUtils().getAllAnnotationMirrors(element);
 			for (AnnotationMirror mirror : mirrors) {
@@ -161,16 +161,9 @@ public class DependeciesFinder {
 		return "singleton";
 	}
 	
-	private void processConfiguration(TypeElement element, Annotation annotation) {
-		BeanToken token = processComponent(element, "configuration", annotation);
-		
-		List<ExecutableElement> beanMethods = getMethodsAnnotatedWith(element, Bean.class);
-		beanMethods.forEach(bm -> proccessBeanMethod(token, bm, annotation));
-	}
-	
 	private void proccessBeanMethod(BeanToken parent, ExecutableElement beanMethod, Annotation annotation) {
 		TypeElement element = (TypeElement) processingEnv.getTypeUtils().asElement(beanMethod.getReturnType());
-		BeanToken token = processComponent(element, "atbean", annotation);
+		BeanToken token = processComponent(element, BeanType.ATBEAN, annotation);
 		token.setInitializer(beanMethod);
 		
 		token.setBeanName(getAtBeanBeanName(beanMethod));

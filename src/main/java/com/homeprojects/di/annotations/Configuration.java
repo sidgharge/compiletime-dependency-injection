@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 
 @Retention(CLASS)
 @Target(TYPE)
-@Component
+@Component(scope = "singleton")
 public @interface Configuration {
 
 }
