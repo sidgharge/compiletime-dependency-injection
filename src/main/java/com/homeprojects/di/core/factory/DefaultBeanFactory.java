@@ -47,7 +47,7 @@ public class DefaultBeanFactory implements BeanFactory {
     @Override
     public <T> T getBean(String name, Class<T> clazz) {
     	for (BeanInfo beanInfo : beanInfos) {
-            if(beanInfo.name().equals(name) && beanInfo.getType() == clazz) {
+            if(beanInfo.name().equals(name) && clazz.isAssignableFrom(beanInfo.getType())) {
                 return (T) beanInfo.getInstance();
             }
         }
