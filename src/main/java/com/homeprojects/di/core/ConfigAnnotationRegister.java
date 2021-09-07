@@ -5,8 +5,8 @@ import java.lang.annotation.Annotation;
 import com.google.auto.service.AutoService;
 import com.homeprojects.di.annotations.Configuration;
 
-@AutoService(AnnonationRegister.class)
-public class ConfigAnnotationRegister implements AnnonationRegister {
+@AutoService(AnnotationRegister.class)
+public class ConfigAnnotationRegister implements AnnotationRegister {
 
 	@Override
 	public Class<? extends Annotation> getAnnotation() {

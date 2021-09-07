@@ -13,7 +13,7 @@ import javax.lang.model.element.TypeElement;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
-import com.homeprojects.di.core.AnnonationRegister;
+import com.homeprojects.di.core.AnnotationRegister;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
@@ -22,7 +22,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.WildcardTypeName;
 
-public class CompositeAnnotationWiter {
+public class CompositeAnnotationWriter {
 
 	private static final String PACKAGE_NAME = "com.homeprojects.generated";
 
@@ -30,7 +30,7 @@ public class CompositeAnnotationWiter {
 
 	private final Set<TypeElement> annotations;
 
-	public CompositeAnnotationWiter(ProcessingEnvironment processingEnv, Set<TypeElement> annotations) {
+	public CompositeAnnotationWriter(ProcessingEnvironment processingEnv, Set<TypeElement> annotations) {
 		this.processingEnv = processingEnv;
 		this.annotations = annotations;
 	}
@@ -43,7 +43,7 @@ public class CompositeAnnotationWiter {
 		List<String> paths = writeClasses();
 
 		FileObject resource = processingEnv.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "",
-				"META-INF/services/com.homeprojects.di.core.AnnonationRegister");
+				"META-INF/services/" + AnnotationRegister.class.getName());
 
 		try (PrintWriter out = new PrintWriter(resource.openWriter())) {
 			for (String path: paths) {
@@ -64,7 +64,7 @@ public class CompositeAnnotationWiter {
 		String className = typeElement.getQualifiedName().toString().replace(".", "_");
 		TypeSpec spec = TypeSpec.classBuilder(className)
 				.addModifiers(Modifier.PUBLIC)
-				.addSuperinterface(AnnonationRegister.class)
+				.addSuperinterface(AnnotationRegister.class)
 				.addMethod(getOverrideMethod(typeElement)).build();
 
 		JavaFile file = JavaFile.builder(PACKAGE_NAME, spec).build();

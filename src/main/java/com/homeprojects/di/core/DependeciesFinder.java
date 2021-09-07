@@ -25,9 +25,7 @@ import javax.lang.model.type.DeclaredType;
 import com.homeprojects.di.annotations.Autowired;
 import com.homeprojects.di.annotations.Bean;
 import com.homeprojects.di.annotations.Component;
-import com.homeprojects.di.annotations.Configuration;
-import com.homeprojects.di.core.beaninfo.BeanInfo;
-import com.homeprojects.di.generators.CompositeAnnotationWiter;
+import com.homeprojects.di.generators.CompositeAnnotationWriter;
 import com.homeprojects.di.processors.BeanProcessor;
 import com.homeprojects.di.validation.ValidationException;
 
@@ -58,7 +56,7 @@ public class DependeciesFinder {
 	}
 
 	private void registerInheritedAnnotations() throws IOException {
-		new CompositeAnnotationWiter(processingEnv, compositeAnnotations).write();;
+		new CompositeAnnotationWriter(processingEnv, compositeAnnotations).write();;
 	}
 
 	private void findComponents() {
@@ -80,16 +78,19 @@ public class DependeciesFinder {
 		if(loaded) {
 			return;
 		}
-		ServiceLoader<AnnonationRegister> serviceLoader = ServiceLoader.load(AnnonationRegister.class, this.getClass().getClassLoader());
-		for (AnnonationRegister annonationRegister : serviceLoader) {
-			System.out.println(annonationRegister.getAnnotation());
-			Optional<Annotation> optional = getComponent(annonationRegister.getAnnotation().getAnnotations());
+		ServiceLoader<AnnotationRegister> serviceLoader = ServiceLoader.load(AnnotationRegister.class, this.getClass().getClassLoader());
+		for (AnnotationRegister annotationRegister : serviceLoader) {
+			System.out.println("Annotation: " + annotationRegister.getAnnotation());
+		}
+		
+		for (AnnotationRegister annotationRegister : serviceLoader) {
+			System.out.println(annotationRegister.getAnnotation());
+			Optional<Annotation> optional = getComponent(annotationRegister.getAnnotation().getAnnotations());
 			if(optional.isEmpty()) {
 				continue;
 			}
-			roundEnvironment.getElementsAnnotatedWith(annonationRegister.getAnnotation())
+			roundEnvironment.getElementsAnnotatedWith(annotationRegister.getAnnotation())
 				.forEach(element -> processComponent((TypeElement)element, BeanType.COMPONENT, optional.get()));
-			
 		}
 		loaded = true;
 		
