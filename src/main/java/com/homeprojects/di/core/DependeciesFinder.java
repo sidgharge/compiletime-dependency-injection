@@ -79,9 +79,6 @@ public class DependeciesFinder {
 			return;
 		}
 		ServiceLoader<AnnotationRegister> serviceLoader = ServiceLoader.load(AnnotationRegister.class, this.getClass().getClassLoader());
-		for (AnnotationRegister annotationRegister : serviceLoader) {
-			System.out.println("Annotation: " + annotationRegister.getAnnotation());
-		}
 		
 		for (AnnotationRegister annotationRegister : serviceLoader) {
 			System.out.println(annotationRegister.getAnnotation());

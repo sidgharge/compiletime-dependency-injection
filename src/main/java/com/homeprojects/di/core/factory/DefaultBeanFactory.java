@@ -53,6 +53,17 @@ public class DefaultBeanFactory implements BeanFactory {
         }
         throw new BeanException(String.format("No bean exists with name '%s' and %s", name, clazz));
     }
+    
+    @Override
+    public <T> List<T> getBeans(Class<T> clazz) {
+    	List<T> beans = new ArrayList<>();
+    	for (BeanInfo beanInfo : beanInfos) {
+            if(beanInfo.getType() == clazz || clazz.isAssignableFrom(beanInfo.getType())) {
+                beans.add((T) beanInfo.getInstance());
+            }
+        }
+    	return beans;
+    }
 
     @Override
     public void close() throws Exception {

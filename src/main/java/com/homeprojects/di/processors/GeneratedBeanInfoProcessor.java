@@ -1,12 +1,13 @@
 package com.homeprojects.di.processors;
 
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -19,11 +20,29 @@ import javax.tools.StandardLocation;
 
 import com.google.auto.service.AutoService;
 import com.homeprojects.di.annotations.GeneratedBeanInfo;
+import com.homeprojects.di.core.beaninfo.BeanInfo;
 
 @SupportedAnnotationTypes("com.homeprojects.di.annotations.GeneratedBeanInfo")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 @AutoService(Processor.class)
 public class GeneratedBeanInfoProcessor extends AbstractProcessor {
+	
+	private static final String LOCATION = "META-INF/services/" + BeanInfo.class.getName();
+	
+	private FileObject resource;
+	
+	private OutputStream os;
+
+	@Override
+	public synchronized void init(ProcessingEnvironment processingEnv) {
+		super.init(processingEnv);
+		try {
+			this.resource = processingEnv.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "", LOCATION);
+			this.os = resource.openOutputStream();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
 	
 	@Override
 	public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnvironment) {
@@ -37,15 +56,12 @@ public class GeneratedBeanInfoProcessor extends AbstractProcessor {
 		}
 		
 		try {
-			FileObject resource = processingEnv.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "", "META-INF/services/com.homeprojects.di.core.beaninfo.BeanInfo");
-			
-			try(PrintWriter out = new PrintWriter(resource.openWriter())) {
-				for (TypeElement element : infos) {
-					out.println(element.getQualifiedName());
-				}
+			for (TypeElement element : infos) {
+				os.write(("\n" + element.getQualifiedName().toString()).getBytes());
 			}
 		} catch (IOException e1) {
 			print(e1.getMessage());
+			e1.printStackTrace();
 		}
 		
 		return false;
