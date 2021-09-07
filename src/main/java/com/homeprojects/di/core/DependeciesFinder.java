@@ -1,8 +1,13 @@
 package com.homeprojects.di.core;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.ServiceLoader;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -21,10 +26,14 @@ import com.homeprojects.di.annotations.Autowired;
 import com.homeprojects.di.annotations.Bean;
 import com.homeprojects.di.annotations.Component;
 import com.homeprojects.di.annotations.Configuration;
+import com.homeprojects.di.core.beaninfo.BeanInfo;
+import com.homeprojects.di.generators.CompositeAnnotationWiter;
 import com.homeprojects.di.processors.BeanProcessor;
 import com.homeprojects.di.validation.ValidationException;
 
 public class DependeciesFinder {
+	
+	private static boolean loaded = false;
 	
 	private final RoundEnvironment roundEnvironment;
 	
@@ -32,16 +41,24 @@ public class DependeciesFinder {
 	
 	private final List<BeanToken> tokens;
 	
+	private final Set<TypeElement> compositeAnnotations;
+	
 	public DependeciesFinder(RoundEnvironment roundEnvironment, ProcessingEnvironment processingEnv) {
 		this.roundEnvironment = roundEnvironment;
 		this.processingEnv = processingEnv;
 		this.tokens = new ArrayList<>();
+		compositeAnnotations = new HashSet<>();
 	}
 
-	public List<BeanToken> find() {
+	public List<BeanToken> find() throws IOException {
 		findComponents();
 		findConfigs();
+		registerInheritedAnnotations();
 		return tokens;
+	}
+
+	private void registerInheritedAnnotations() throws IOException {
+		new CompositeAnnotationWiter(processingEnv, compositeAnnotations).write();;
 	}
 
 	private void findComponents() {
@@ -58,8 +75,24 @@ public class DependeciesFinder {
 		// Doing this because @Configuration is already compiled
 		// and compiler won't find it
 		// So we're getting it from classpath
-		TypeElement configElement = processingEnv.getElementUtils().getTypeElement(Configuration.class.getName());
-		processInheritedAnnotation(configElement, configElement.getAnnotation(Component.class));
+//		TypeElement configElement = processingEnv.getElementUtils().getTypeElement(Configuration.class.getName());
+//		processInheritedAnnotation(configElement, configElement.getAnnotation(Component.class));
+		if(loaded) {
+			return;
+		}
+		ServiceLoader<AnnonationRegister> serviceLoader = ServiceLoader.load(AnnonationRegister.class, this.getClass().getClassLoader());
+		for (AnnonationRegister annonationRegister : serviceLoader) {
+			System.out.println(annonationRegister.getAnnotation());
+			Optional<Annotation> optional = getComponent(annonationRegister.getAnnotation().getAnnotations());
+			if(optional.isEmpty()) {
+				continue;
+			}
+			roundEnvironment.getElementsAnnotatedWith(annonationRegister.getAnnotation())
+				.forEach(element -> processComponent((TypeElement)element, BeanType.COMPONENT, optional.get()));
+			
+		}
+		loaded = true;
+		
 //		for(Element element: roundEnvironment.getElementsAnnotatedWith(Configuration.class)) {
 //			if(element.getKind().equals(ElementKind.ANNOTATION_TYPE)) {
 //				processInheritedAnnotation((TypeElement) element, element.getAnnotation(Configuration.class));
@@ -67,6 +100,19 @@ public class DependeciesFinder {
 //				processConfiguration((TypeElement) element, element.getAnnotation(Configuration.class));
 //			}
 //		}
+	}
+	
+	private Optional<Annotation> getComponent(Annotation[] annotations) {
+		for (Annotation annotation : annotations) {
+			if(annotation.annotationType().equals(Component.class)) {
+				return Optional.of(annotation);
+			}
+			Optional<Annotation> optional = getComponent(annotation.getClass().getAnnotations());
+			if(optional.isPresent()) {
+				return optional;
+			}
+		}
+		return Optional.empty();
 	}
 
 	private BeanToken processComponent(TypeElement element, BeanType type, Annotation annotation) {
@@ -90,6 +136,7 @@ public class DependeciesFinder {
 	}
 
 	private void processInheritedAnnotation(TypeElement element, Annotation annotation) {
+		compositeAnnotations.add(element);
 		for(Element e: roundEnvironment.getElementsAnnotatedWith(element)) {
 			if(e.getKind().equals(ElementKind.ANNOTATION_TYPE)) {
 				processInheritedAnnotation((TypeElement) e, annotation);

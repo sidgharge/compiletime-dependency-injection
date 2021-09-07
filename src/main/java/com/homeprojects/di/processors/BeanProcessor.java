@@ -1,5 +1,6 @@
 package com.homeprojects.di.processors;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -45,6 +46,9 @@ public class BeanProcessor extends AbstractProcessor {
 			new Generator(beans, processingEnv).generate();
 		} catch (ValidationException e) {
 			e.log(processingEnv.getMessager());
+		} catch (IOException e) {
+			processingEnv.getMessager().printMessage(Kind.ERROR, e.getMessage());
+			e.printStackTrace();
 		}
 		
 		return false;
