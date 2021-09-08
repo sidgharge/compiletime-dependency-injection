@@ -83,7 +83,7 @@ public class DependeciesFinder {
 		for (AnnotationRegister annotationRegister : serviceLoader) {
 			System.out.println(annotationRegister.getAnnotation());
 			Optional<Annotation> optional = getComponent(annotationRegister.getAnnotation().getAnnotations());
-			if(optional.isEmpty()) {
+			if(!optional.isPresent()) {
 				continue;
 			}
 			roundEnvironment.getElementsAnnotatedWith(annotationRegister.getAnnotation())
@@ -221,7 +221,7 @@ public class DependeciesFinder {
 	
 	private String getAtBeanBeanName(ExecutableElement beanMethod) {
 		String name = beanMethod.getAnnotation(Bean.class).name();
-		return name.isBlank() ? beanMethod.getSimpleName().toString() : name;
+		return name.trim().isEmpty() ? beanMethod.getSimpleName().toString() : name;
 	}
 
 	private <A extends Annotation> List<ExecutableElement> getMethodsAnnotatedWith(TypeElement element, Class<A> clazz) {
