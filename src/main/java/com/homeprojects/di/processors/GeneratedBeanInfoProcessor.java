@@ -1,7 +1,9 @@
 package com.homeprojects.di.processors;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -31,14 +33,17 @@ public class GeneratedBeanInfoProcessor extends AbstractProcessor {
 	
 	private FileObject resource;
 	
-	private OutputStream os;
+	private BufferedOutputStream os;
+	
+	private PrintWriter writer;
 
 	@Override
 	public synchronized void init(ProcessingEnvironment processingEnv) {
 		super.init(processingEnv);
 		try {
 			this.resource = processingEnv.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "", LOCATION);
-			this.os = resource.openOutputStream();
+//			this.os = new BufferedOutputStream(resource.openOutputStream());
+			writer = new PrintWriter(resource.openWriter());
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -55,15 +60,10 @@ public class GeneratedBeanInfoProcessor extends AbstractProcessor {
 			return false;
 		}
 		
-		try {
-			for (TypeElement element : infos) {
-				os.write(("\n" + element.getQualifiedName().toString()).getBytes());
-			}
-		} catch (IOException e1) {
-			print(e1.getMessage());
-			e1.printStackTrace();
+		for (TypeElement element : infos) {
+			writer.println(element.getQualifiedName().toString());
+			writer.flush();
 		}
-		
 		return false;
 	}
 	
